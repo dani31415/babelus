@@ -10,3 +10,4 @@ let app = new App(new SrcFile(html),html);
 
 //app.process('src/main.ts', './.out');
 app.process('angular/projects/test1/src/app/app.component.ts', './.out');
+//app.process('tmp/test.tsx', './.out');

@@ -23,9 +23,7 @@
                 "<node_internals>/**"
             ],
             "program": "node_modules/ts-node/dist/bin.js",
-            "args": [ "--skip-project", "main.ts" ],
-            "console": "integratedTerminal"
-
+            "args": [ "--skip-project", "main.ts" ]
         }
     ]
 }

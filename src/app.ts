@@ -5,18 +5,21 @@ import { Html } from './html';
 
 export class App {
     constructor(private srcFile:SrcFile, private html:Html) {
-
     }
 
     public process(srcDir : string, outDir : string) {
         let fileNames = [ srcDir ];
         let options = {
             noEmitOnError: true,
-            noImplicitAny: true,
-            target: ts.ScriptTarget.ES2020,
-            module: ts.ModuleKind.CommonJS,
+            //noImplicitAny: true,
+            target: ts.ScriptTarget.ES5,
+            module: ts.ModuleKind.ESNext,
             experimentalDecorators: true,
-            outDir: outDir
+            outDir: outDir,
+            noEmit: true,
+
+            moduleResolution: ts.ModuleResolutionKind.NodeJs,
+            jsx: ts.JsxEmit.Preserve
         };
 
         let program = ts.createProgram(fileNames, options);
@@ -44,8 +47,10 @@ export class App {
         for (let sf of sfs) {
             if (fileNames.includes(sf.fileName)) {
                 console.log(sf.fileName);
-                this.srcFile.show(sf,0);
-                this.srcFile.process(sf);
+                this.srcFile.show(sf);
+                let transformed = this.srcFile.process2(sf);
+                let sourceString = this.srcFile.emit(transformed);
+                console.log(sourceString);
             } else if (sf.fileName.indexOf('/node_modules/')<0) {
                 console.log(sf.fileName);
             }
