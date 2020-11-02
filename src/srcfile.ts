@@ -5,7 +5,7 @@ import * as path from 'path';
 
 // @angular/compiler @angular/compiler-cli
 import * as angular from '@angular/compiler';
-import * as template from '@angular/compiler/src/render3/view/template';
+import * as r3_template from '@angular/compiler/src/render3/view/template';
 import * as r3_ast from '@angular/compiler/src/render3/r3_ast';
 import { ParseError } from '@angular/compiler/src/parse_util';
 import * as output_ast from '@angular/compiler/src/output/output_ast';
@@ -19,8 +19,37 @@ class Context {
     fileName:String
 }
 
+class ComponentDeclaration {
+    selector?: string;
+    templateUrl?: string;
+}
+
 export class SrcFile {
+    private ignoreModules = [ '@angular/core' ]; 
+    private classRename = new Map();
+
     public constructor(private html:Html) {
+    }
+
+    protected nodeString = {
+        identifier: function (node : ts.Node) : string {
+            if (node.kind != ts.SyntaxKind.Identifier) {
+                throw "Expected an identifier";
+            }
+            let identifier = node as ts.Identifier;
+            return identifier.text;
+        }  
+    };
+
+    private capitalizeName( name : string ) {
+        if (name.length==0) return name;
+        return name.charAt(0).toUpperCase() + name.slice(1);
+    }
+
+    private capitalizeSelector( className : string ) {
+        let parts = className.split('-');
+        parts = parts.map( this.capitalizeName );
+        return parts.join('');
     }
 
     public justForCompilation(template : string) : ts.Expression {
@@ -35,7 +64,7 @@ export class SrcFile {
         output = angular.parseTemplate(template,null,null); // string --> r3_ast.node[]
         let nodes : r3_ast.Node[];
         nodes = output.nodes;
-        let b : template.TemplateDefinitionBuilder;
+        let b : r3_template.TemplateDefinitionBuilder;
         let out : output_ast.FunctionExpr;
         out = b.buildTemplateFunction(output.nodes,[]); // r3_ast.node[] --> output_ast.FunctionExpr
         let expr : ts.Expression;
@@ -88,65 +117,7 @@ export class SrcFile {
         return s;
     }
 
-    public process(node : ts.SourceFile) {
-        this.processNode(node,{
-            fileName: node.fileName
-        });
-    }
-
-    public processNode(node : ts.Node, context:Context) {
-        if (node.kind == ts.SyntaxKind.ClassDeclaration) {
-            let clazz : ts.ClassDeclaration;
-            clazz = node as ts.ClassDeclaration;
-            if (clazz.decorators) {
-                this.show(clazz);
-                for (let decorator of clazz.decorators) {
-                    if (decorator.expression.kind == ts.SyntaxKind.CallExpression) {
-                        let callExpression = decorator.expression as ts.CallExpression;
-                        let func = callExpression.expression;
-                        if (func.kind == ts.SyntaxKind.Identifier) {
-                            let identifier = func as ts.Identifier;
-                            if (identifier.text == 'Component') {
-                                console.log('Component found');
-                                if (callExpression.arguments.length>0) {
-                                    if (callExpression.arguments[0].kind!=ts.SyntaxKind.ObjectLiteralExpression) {
-                                        throw "Expected ObjectLiteralExpression";
-                                    }
-                                    let object = callExpression.arguments[0] as ts.ObjectLiteralExpression;
-                                    for (let property of object.properties) {
-                                        if (property.kind!=ts.SyntaxKind.PropertyAssignment) {
-                                            throw "Expected PropertyAssignment";
-                                        }
-                                        if (property.name.kind!=ts.SyntaxKind.Identifier) {
-                                            throw "Expected Identifier";
-                                        }
-                                        let name = property.name.escapedText;
-                                        if (name=='templateUrl') {
-                                            if (property.initializer.kind!=ts.SyntaxKind.StringLiteral) {
-                                                throw "Expected StringLiteral";
-                                            }
-                                            // Get file name
-                                            let stringLiteral = property.initializer as ts.StringLiteral;
-                                            let relHtmlFile = stringLiteral.text;
-                                            let dir = path.dirname(context.fileName.toString());
-                                            let htmlFile = path.join( dir, relHtmlFile);
-                                            return htmlFile;
-                                            //this.html.process(htmlFile);
-                                        }
-                                    }
-                                }
-                            }
-                        }
-                    }
-                }
-            }
-        }
-        node.forEachChild<void>( (n:ts.Node) => {
-            this.processNode(n, context);
-        });
-    }
-
-    private findHtml(clazz:ts.ClassDeclaration, factory:ts.NodeFactory, context:Context) {
+    private findComponentDeclaration(clazz:ts.ClassDeclaration, factory:ts.NodeFactory, context:Context) : ComponentDeclaration {
         if (clazz.decorators) {
             this.show(clazz);
             for (let decorator of clazz.decorators) {
@@ -161,6 +132,8 @@ export class SrcFile {
                                 if (callExpression.arguments[0].kind!=ts.SyntaxKind.ObjectLiteralExpression) {
                                     throw "Expected ObjectLiteralExpression";
                                 }
+                                let result : ComponentDeclaration;
+                                result = {};
                                 let object = callExpression.arguments[0] as ts.ObjectLiteralExpression;
                                 for (let property of object.properties) {
                                     if (property.kind!=ts.SyntaxKind.PropertyAssignment) {
@@ -181,8 +154,20 @@ export class SrcFile {
                                         // this.evaluator.evaluate(relHtmlFile);
                                         let dir = path.dirname(context.fileName.toString());
                                         let htmlFile = path.join( dir, relHtmlFile);
-                                        return this.html.translateTemplate(factory, htmlFile);
+                                        result.templateUrl = htmlFile;
+                                        //return this.html.translateTemplate(factory, htmlFile);
                                     }
+                                    if (name=='selector') {
+                                        if (property.initializer.kind!=ts.SyntaxKind.StringLiteral) {
+                                            throw "Expected StringLiteral";
+                                        }
+                                        let stringLiteral = property.initializer as ts.StringLiteral;
+                                        result.selector = stringLiteral.text;
+                                    }
+                                }
+
+                                if (Object.keys(result).length>0) {
+                                    return result;
                                 }
                             }
                         }
@@ -242,21 +227,48 @@ export class SrcFile {
         let trans = (context:ts.TransformationContext) => {
             const visit: ts.Visitor = node => {
                 if (node==null) return null;
+                if (node.kind==ts.SyntaxKind.ImportDeclaration) {
+                    let importDeclaration = node as ts.ImportDeclaration;
+                    if (importDeclaration.moduleSpecifier.kind==ts.SyntaxKind.StringLiteral) {
+                        let moduleSpecifier = importDeclaration.moduleSpecifier as ts.StringLiteral;
+                        if (this.ignoreModules.includes(moduleSpecifier.text)) {
+                            return null;
+                        }
+                    }
+                }
+                if (node.kind==ts.SyntaxKind.Decorator) {
+                    if (node.parent.kind == ts.SyntaxKind.ClassDeclaration) {
+                        let decorator = node as ts.Decorator;
+                        if (decorator.expression.kind == ts.SyntaxKind.CallExpression)  {
+                            let callExpression = decorator.expression as ts.CallExpression;
+                            let func = callExpression.expression;
+                            if (func.kind == ts.SyntaxKind.Identifier) {
+                                let identifier = func as ts.Identifier;
+                                if (identifier.text == 'Component') {
+                                    return null;
+                                }
+                            }
+                        }
+                    }
+                }
                 if (node.kind==ts.SyntaxKind.ClassDeclaration) {
                     let clazz = node as ts.ClassDeclaration;
-                    let templateExpr : ts.Expression; // hp.ParseTreeResult;
-                    //htmlResult = this.findHtml(clazz, processContext);
-                    templateExpr = this.findHtml(clazz, context.factory, processContext);
-                    if (templateExpr!=null) {
+                    let componentDeclaration : ComponentDeclaration; // hp.ParseTreeResult;
+                    componentDeclaration = this.findComponentDeclaration(clazz, context.factory, processContext);
+                    if (componentDeclaration!=null) {
+                        let templateExpr : ts.Expression; // hp.ParseTreeResult;
+                        templateExpr = this.html.translateTemplate(context.factory, componentDeclaration.templateUrl);
                         let newMember = this.render(context.factory, templateExpr);
                         let newMembers = context.factory.createNodeArray<ts.ClassElement>([...clazz.members, newMember]);
-                        let t : ts.UnparsedSourceText;
-                        
+                        let newClassName = this.capitalizeSelector( componentDeclaration.selector );
+                        let newClassNameNode = context.factory.createIdentifier( newClassName );
+                        let className = this.nodeString.identifier(clazz.name);
+                        this.classRename.set(className, newClassName);
                         return context.factory.updateClassDeclaration(
-                            clazz, 
+                            clazz,
                             ts.visitNodes(clazz.decorators, visit, ts.isDecorator), 
                             ts.visitNodes(clazz.modifiers, visit, ts.isModifier), 
-                            ts.visitNode(clazz.name, visit, ts.isIdentifier), 
+                            ts.visitNode(newClassNameNode, visit, ts.isIdentifier),  // name
                             ts.visitNodes(clazz.typeParameters, visit, ts.isTypeParameterDeclaration), 
                             ts.visitNodes(clazz.heritageClauses, visit, ts.isHeritageClause), 
                             ts.visitNodes(newMembers, visit, ts.isClassElement)
