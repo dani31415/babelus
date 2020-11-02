@@ -1,4 +1,6 @@
 import * as ts from 'typescript';
+import * as fs from 'fs';
+import * as path from 'path';
 
 import { SrcFile } from './srcfile';
 import { Html } from './html';
@@ -50,6 +52,13 @@ export class App {
                 this.srcFile.show(sf);
                 let transformed = this.srcFile.process2(sf);
                 let sourceString = this.srcFile.emit(transformed);
+                let outFileName = path.basename(sf.fileName)+'x';
+                fs.mkdirSync(outDir, {recursive:true} );
+                let outFile = path.join(outDir,outFileName);
+                console.log(outFile);
+                fs.writeFileSync(outFile, sourceString, {
+                    encoding:'utf8'
+                });
                 console.log(sourceString);
             } else if (sf.fileName.indexOf('/node_modules/')<0) {
                 console.log(sf.fileName);
