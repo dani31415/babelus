@@ -146,7 +146,7 @@ export class SrcFile {
         });
     }
 
-    private findHtml(clazz:ts.ClassDeclaration, context:Context) {
+    private findHtml(clazz:ts.ClassDeclaration, factory:ts.NodeFactory, context:Context) {
         if (clazz.decorators) {
             this.show(clazz);
             for (let decorator of clazz.decorators) {
@@ -181,7 +181,7 @@ export class SrcFile {
                                         // this.evaluator.evaluate(relHtmlFile);
                                         let dir = path.dirname(context.fileName.toString());
                                         let htmlFile = path.join( dir, relHtmlFile);
-                                        return this.html.process2(htmlFile);
+                                        return this.html.translateTemplate(factory, htmlFile);
                                     }
                                 }
                             }
@@ -191,12 +191,6 @@ export class SrcFile {
             }
         }
         return null;
-    }
-
-    public htmlToNode2(factory : ts.NodeFactory, node : ts.Expression) : ts.ClassElement {
-        //let node = this.html.process2(templateFile);
-        return this.render(factory, node);
-
     }
 
     public htmlToNode(factory : ts.NodeFactory, pts : hp.ParseTreeResult) : ts.ClassElement {
@@ -252,9 +246,9 @@ export class SrcFile {
                     let clazz = node as ts.ClassDeclaration;
                     let templateExpr : ts.Expression; // hp.ParseTreeResult;
                     //htmlResult = this.findHtml(clazz, processContext);
-                    templateExpr = this.findHtml(clazz, processContext);
+                    templateExpr = this.findHtml(clazz, context.factory, processContext);
                     if (templateExpr!=null) {
-                        let newMember = this.htmlToNode2(context.factory, templateExpr);
+                        let newMember = this.render(context.factory, templateExpr);
                         let newMembers = context.factory.createNodeArray<ts.ClassElement>([...clazz.members, newMember]);
                         let t : ts.UnparsedSourceText;
                         
