@@ -31,7 +31,6 @@ export class Html {
         });
 
         return result;
-        //console.log(result);
     }
 
     protected angularParseTemplate(fileName : string) : r3_ast.Node[] {
@@ -133,7 +132,6 @@ export class Html {
     private beginBlanks(pss : parse_util.ParseSourceSpan) : string {
         
         let content = pss.start.file.content
-        console.log('start',content.substring(pss.start.offset, pss.end.offset),'start');
         let i : number;
         for (i=pss.start.offset;i<pss.end.offset;i++) {
             let c = content.charAt(i);
@@ -146,7 +144,6 @@ export class Html {
 
     private endBlanks(pss : parse_util.ParseSourceSpan) : string {
         let content = pss.start.file.content
-        console.log('end',content.substring(pss.start.offset, pss.end.offset),'end');
         let i : number;
         for (i=pss.end.offset-1;i>=pss.start.offset;i--) {
             let c = content.charAt(i);
