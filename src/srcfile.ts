@@ -99,7 +99,7 @@ export class SrcFile {
     private showImpl(node : ts.Node, depth: number, counter:{items:number}) {
         let kind = node.kind;
         console.log(this.spaces(depth),ts.SyntaxKind[kind]+' ('+kind+') #'+counter.items);
-        if (counter.items==11) {
+        if (counter.items==29) {
             let k;
             k=33;
         }
@@ -264,13 +264,26 @@ export class SrcFile {
                         let newClassNameNode = context.factory.createIdentifier( newClassName );
                         let className = this.nodeString.identifier(clazz.name);
                         this.classRename.set(className, newClassName);
+
+                        // extends React.Component
+                        let react = context.factory.createIdentifier('React');
+                        let component = context.factory.createIdentifier('Component');
+                        let reactComponent = context.factory.createPropertyAccessExpression(react,component)
+                        let classExpression = context.factory.createExpressionWithTypeArguments(reactComponent, undefined);
+                        let heritageClause = context.factory.createHeritageClause(ts.SyntaxKind.ExtendsKeyword, [classExpression] );
+                        let heritageClauses;
+                        if (clazz.heritageClauses) {
+                            heritageClauses = context.factory.createNodeArray( [...clazz.heritageClauses, heritageClause] );
+                        } else {
+                            heritageClauses = context.factory.createNodeArray( [heritageClause] );
+                        }
                         return context.factory.updateClassDeclaration(
                             clazz,
                             ts.visitNodes(clazz.decorators, visit, ts.isDecorator), 
                             ts.visitNodes(clazz.modifiers, visit, ts.isModifier), 
                             ts.visitNode(newClassNameNode, visit, ts.isIdentifier),  // name
                             ts.visitNodes(clazz.typeParameters, visit, ts.isTypeParameterDeclaration), 
-                            ts.visitNodes(clazz.heritageClauses, visit, ts.isHeritageClause), 
+                            ts.visitNodes(heritageClauses, visit, ts.isHeritageClause), 
                             ts.visitNodes(newMembers, visit, ts.isClassElement)
                         );
                     }
@@ -290,6 +303,6 @@ export class SrcFile {
 
     public emit(node : ts.SourceFile) : string {
         let sourceString = printer.printNode(ts.EmitHint.SourceFile, node, node);
-        return sourceString;
+        return "import React from 'react';\n" + sourceString;
     }
 }
