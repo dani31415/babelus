@@ -13,29 +13,13 @@ import * as translator from '@angular/compiler-cli/src/ngtsc/translator';
 
 import { Html } from './html';
 import { Program, InputDeclaration, ComponentDeclaration } from './program';
+import { MapArray } from './lib/maparray';
 
 const printer = ts.createPrinter();
 
 class Context {
     fileName:string;
     currentClass:ComponentDeclaration;
-}
-
-class Import {
-    private imports: Map<string,string[]> = new Map(); 
-    public add(file:string, symbol:string) {
-        let symbols = this.imports.get(file);
-        if (symbols==null) {
-            symbols = [];
-            this.imports.set(file,symbols);
-        }
-        if (!symbols.includes(symbol)) {
-            symbols.push(symbol);
-        }
-    }
-    public forEach(x) {
-        this.imports.forEach(x); 
-    }
 }
 
 export class SrcFile {
@@ -351,7 +335,7 @@ export class SrcFile {
 
     public fixDecklarations(node : ts.SourceFile, program: Program) : ts.SourceFile {
         let currentClass : ComponentDeclaration;
-        let imports : Import = new Import();
+        let imports = new MapArray<string,string>();
         let trans = (context:ts.TransformationContext) => {
             const visit: ts.Visitor = node => {
                 if (node==null) return null;
@@ -455,7 +439,6 @@ export class SrcFile {
                     let newTagName = program.selectorClass.get(tagName);
                     if (newTagName!=null) {
                         imports.add(program.componentLocation.get(newTagName), newTagName);
-                        //imports.push( [ newTagName, ] );
                         return context.factory.createJsxOpeningElement(
                             context.factory.createIdentifier(newTagName),
                             openingElement.typeArguments,

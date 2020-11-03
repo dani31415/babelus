@@ -1,7 +1,7 @@
 export class MapArray<K,V> {
     private map = new Map<K,V[]>();
 
-    public foreach(x) {
+    public forEach(x) {
         this.map.forEach(x);
     }
 
