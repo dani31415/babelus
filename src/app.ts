@@ -4,13 +4,37 @@ import * as path from 'path';
 
 import { SrcFile } from './srcfile';
 import { Html } from './html';
+import { Program } from './program';
 
 export class App {
     constructor(private srcFile:SrcFile, private html:Html) {
     }
 
-    public process(srcDir : string, outDir : string) {
-        let fileNames = [ srcDir ];
+    public emitFile(sourceFile: ts.SourceFile, program : Program) {
+        //this.srcFile.show(sourceFile);
+        let sourceString = this.srcFile.emit(sourceFile);
+
+        // Get output file name
+        let outFileName = path.relative(program.srcDir,sourceFile.fileName) + 'x';
+        //let outFileName = path.basename(sourceFile.fileName)+'x';
+        let outFile = path.join(program.outDir,outFileName);
+        //console.log(outFile);
+
+        // Write output file
+        console.log("Emiting: "+outFile+"...");
+        fs.mkdirSync(path.dirname(outFile), {recursive:true} );
+        fs.writeFileSync(outFile, sourceString, {
+            encoding:'utf8'
+        });
+    }
+
+
+    public process(srcFolder : string, srcFile : string, outDir : string) {
+        let program = new Program();
+        program.srcDir = srcFolder;
+        program.outDir = outDir;
+    
+        let fileNames = [ path.join(srcFolder,srcFile) ];
         let options = {
             noEmitOnError: true,
             //noImplicitAny: true,
@@ -24,9 +48,9 @@ export class App {
             jsx: ts.JsxEmit.Preserve
         };
 
-        let program = ts.createProgram(fileNames, options);
+        let tsProgram = ts.createProgram(fileNames, options);
 
-        let allDiagnostics = ts.getPreEmitDiagnostics(program);
+        let allDiagnostics = ts.getPreEmitDiagnostics(tsProgram);
     
         let stop = false;
         allDiagnostics.forEach(diagnostic => {
@@ -45,25 +69,34 @@ export class App {
             process.exit(1);
         }
 
-        let sfs : readonly ts.SourceFile[] = program.getSourceFiles();
+
+        program.sourceFiles = [];
+
+        // Select files to process
+        let sfs : readonly ts.SourceFile[] = tsProgram.getSourceFiles();
         for (let sf of sfs) {
-            if (fileNames.includes(sf.fileName)) {
-                console.log(sf.fileName);
-                this.srcFile.show(sf);
-                let transformed = this.srcFile.process2(sf);
-                let sourceString = this.srcFile.emit(transformed);
-                let outFileName = path.basename(sf.fileName)+'x';
-                fs.mkdirSync(outDir, {recursive:true} );
-                let outFile = path.join(outDir,outFileName);
-                console.log(outFile);
-                fs.writeFileSync(outFile, sourceString, {
-                    encoding:'utf8'
-                });
-                console.log(sourceString);
-            } else if (sf.fileName.indexOf('/node_modules/')<0) {
-                console.log(sf.fileName);
+            if (fileNames.includes(sf.fileName)) continue; // ignore main.ts file
+            if (sf.fileName.indexOf('.module.')>0) continue; // ignore modules
+            if (sf.fileName.indexOf('/node_modules/')<0) {
+                if (sf.fileName.endsWith('user.component.ts')) {
+                    this.srcFile.show(sf);
+                }
+                program.sourceFiles.push(sf);
             }
         }
+
+        for (let i=0;i<program.sourceFiles.length;i++) {
+            program.sourceFiles[i] = this.srcFile.process2(program.sourceFiles[i], program);
+        }
+
+        for (let i=0;i<program.sourceFiles.length;i++) {
+            program.sourceFiles[i] = this.srcFile.fixDecklarations(program.sourceFiles[i], program);
+        }
+
+        for (let i=0;i<program.sourceFiles.length;i++) {
+            this.emitFile(program.sourceFiles[i], program);
+        }
+
     
     }
 

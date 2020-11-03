@@ -108,13 +108,18 @@ export class Html {
 
     }
 
-    private createElement(factory: ts.NodeFactory, tagName: string, children: ts.JsxChild[]) : ts.JsxElement {
+    private createElement(factory: ts.NodeFactory, tagName: string, attributes: r3_ast.TextAttribute[], children: ts.JsxChild[]) : ts.JsxElement {
+        let attributeNodes = attributes.map ( attribute => {
+            let name = factory.createIdentifier(attribute.name)
+            let value = factory.createStringLiteral(attribute.value);
+            return factory.createJsxAttribute(name, value);
+        });
+        let attributesNode = factory.createJsxAttributes( attributeNodes );
         let tag = factory.createIdentifier(tagName);
-        let openDiv = factory.createJsxOpeningElement(tag,[], factory.createJsxAttributes([]));
+        let openDiv = factory.createJsxOpeningElement(tag, [], attributesNode); // factory.createJsxAttributes([]));
         let closeDiv = factory.createJsxClosingElement(tag);
         let element = factory.createJsxElement(openDiv,children,closeDiv);
         return element;
-
     }
 
     private flat<T>(M:T[][]) : T[] {
@@ -130,7 +135,7 @@ export class Html {
     }
 
     private beginBlanks(pss : parse_util.ParseSourceSpan) : string {
-        
+        if (pss==null) return '';
         let content = pss.start.file.content
         let i : number;
         for (i=pss.start.offset;i<pss.end.offset;i++) {
@@ -143,6 +148,7 @@ export class Html {
     }
 
     private endBlanks(pss : parse_util.ParseSourceSpan) : string {
+        if (pss==null) return '';
         let content = pss.start.file.content
         let i : number;
         for (i=pss.end.offset-1;i>=pss.start.offset;i--) {
@@ -159,6 +165,11 @@ export class Html {
             return node['endSourceSpan'].end.offset;
         }
         return node.sourceSpan.end.offset;
+    }
+
+    private createText(factory: ts.NodeFactory, text:string) : ts.JsxText[] {
+        if (text==null || text.length==0) return [];
+        return [ factory.createJsxText(text) ];
     }
 
     public translateTemplate(factory : ts.NodeFactory, fileName : string) : ts.Expression {
@@ -215,28 +226,38 @@ export class Html {
             //visit?: (ast: expr.AST, context?: any): ts.Expression => { return null; },            
         };
         let visitor = {
-            visitElement: (element: r3_ast.Element) : ts.JsxChild[] => { 
+            visitElement: (element: r3_ast.Element) : ts.JsxChild[] => {
                 let visitedChildren : ts.JsxChild[][]  = r3_ast.visitAll(visitor, element.children);
                 let content = element.sourceSpan.start.file.content;
                 // Interlace with blanks
-                let newChildren = [];
-                newChildren.push(factory.createJsxText(this.endBlanks(element.startSourceSpan)));
+                let newChildren : ts.JsxChild[];
+                if (!element.endSourceSpan) { // <br>
+                    let tag = factory.createIdentifier(element.name);
+                    let outElement = factory.createJsxSelfClosingElement(tag,undefined,undefined);
+                    //let outElement = this.createElement(factory,element.name,[]);
+                    return [
+                        ...this.createText(factory, this.beginBlanks(element.startSourceSpan)),
+                        outElement,
+                        ...this.createText(factory, this.endBlanks(element.startSourceSpan))];    
+                }
+
+                newChildren = [ ...this.createText(factory, this.endBlanks(element.startSourceSpan)) ];
                 let start = element.startSourceSpan.end.offset;
                 for (let i=0;i<element.children.length;i++) {
                     let end = element.children[i].sourceSpan.start.offset;
-                    newChildren.push(factory.createJsxText(content.substring(start,end)));
+                    newChildren = newChildren.concat( [ ...this.createText(factory, content.substring(start,end)) ] );
                     newChildren = newChildren.concat(visitedChildren[i]);
                     start = this.endOffset(element.children[i]);
                 }
-                newChildren.push(factory.createJsxText(content.substring(start,element.endSourceSpan.start.offset)));
-                newChildren.push(factory.createJsxText(this.beginBlanks(element.endSourceSpan)));
+                newChildren = newChildren.concat( [ ...this.createText(factory, content.substring(start,element.endSourceSpan.start.offset)) ] );
+                newChildren = newChildren.concat( [ ...this.createText(factory, this.beginBlanks(element.endSourceSpan)) ] );
 
-                let outElement = this.createElement(factory,element.name,newChildren);
+                let outElement = this.createElement(factory,element.name,element.attributes,newChildren);
 
                 return [
-                    factory.createJsxText(this.beginBlanks(element.startSourceSpan)),
+                    ...this.createText(factory, this.beginBlanks(element.startSourceSpan)),
                     outElement,
-                    factory.createJsxText(this.endBlanks(element.endSourceSpan))];
+                    ...this.createText(factory, this.endBlanks(element.endSourceSpan))];
             },
             visitTemplate: function(template: r3_ast.Template): ts.JsxChild[] { return null; },
             visitContent: function(content: r3_ast.Content): ts.JsxChild[] { return null; },
@@ -248,9 +269,9 @@ export class Html {
             visitText: (text: r3_ast.Text): ts.JsxChild[] => { 
                 return [
                     // Recover begin and end blanks from the source
-                    factory.createJsxText(this.beginBlanks(text.sourceSpan)),
+                    ...this.createText(factory, this.beginBlanks(text.sourceSpan)),
                     factory.createJsxText(text.value.trim()),
-                    factory.createJsxText(this.endBlanks(text.sourceSpan))
+                    ...this.createText(factory, this.endBlanks(text.sourceSpan))
                 ];
             },
             visitBoundText: function(text: r3_ast.BoundText): ts.JsxChild[] { 
@@ -277,7 +298,7 @@ export class Html {
         if (results.length==1) {
             result = results[0] as ts.JsxElement;
         } else {
-            result = this.createElement(factory, 'React.Fragment', results);
+            result = this.createElement(factory, 'React.Fragment', [], results);
         }
 
         return result;
