@@ -4,7 +4,7 @@ import * as path from 'path';
 
 import { SrcFile } from './srcfile';
 import { Html } from './html';
-import { Program } from './program';
+import { Program, SourceFile } from './program';
 
 export class App {
     constructor(private srcFile:SrcFile, private html:Html) {
@@ -81,20 +81,24 @@ export class App {
                 if (sf.fileName.endsWith('user.component.ts')) {
                     this.srcFile.show(sf);
                 }
-                program.sourceFiles.push(sf);
+                let sourceFile = new SourceFile();
+                sourceFile.sourceFile = sf;
+                program.sourceFiles.push(sourceFile);
             }
         }
 
         for (let i=0;i<program.sourceFiles.length;i++) {
-            program.sourceFiles[i] = this.srcFile.process2(program.sourceFiles[i], program);
+            this.srcFile.process2(program.sourceFiles[i], program);
         }
 
         for (let i=0;i<program.sourceFiles.length;i++) {
-            program.sourceFiles[i] = this.srcFile.fixDecklarations(program.sourceFiles[i], program);
+            this.srcFile.fixDecklarations(program.sourceFiles[i], program);
         }
 
         for (let i=0;i<program.sourceFiles.length;i++) {
-            this.emitFile(program.sourceFiles[i], program);
+            if ( program.sourceFiles[i].needsEmit ) {
+                this.emitFile(program.sourceFiles[i].sourceFile, program);
+            }
         }
 
     

@@ -12,14 +12,14 @@ import * as output_ast from '@angular/compiler/src/output/output_ast';
 import * as translator from '@angular/compiler-cli/src/ngtsc/translator';
 
 import { Html } from './html';
-import { Program, InputDeclaration, ComponentDeclaration } from './program';
+import { Program, InputDeclaration, ClassDeclaration, ComponentDeclaration, SourceFile } from './program';
 import { MapArray } from './lib/maparray';
 
 const printer = ts.createPrinter();
 
 class Context {
     fileName:string;
-    currentClass:ComponentDeclaration;
+    currentClass:ClassDeclaration;
 }
 
 export class SrcFile {
@@ -219,10 +219,10 @@ export class SrcFile {
         //return this.render(factory);
     }
 
-    public process2(node : ts.SourceFile, program: Program) : ts.SourceFile {
+    public process2(sourceFile : SourceFile, program: Program) {
         let processContext : Context = 
         {
-            fileName: node.fileName,
+            fileName: sourceFile.sourceFile.fileName,
             currentClass: null
         };
 
@@ -255,21 +255,24 @@ export class SrcFile {
                     }
                 }
                 if (node.kind == ts.SyntaxKind.PropertyDeclaration) {
-                    let propertyDeclaration = node as ts.PropertyDeclaration;
-                    let decorators = propertyDeclaration.decorators as ts.NodeArray<ts.Decorator>;
-                    if (decorators) for (let decorator of decorators) {
-                        if (decorator.expression.kind == ts.SyntaxKind.CallExpression)  {
-                            let callExpression = decorator.expression as ts.CallExpression;
-                            let func = callExpression.expression;
-                            if (func.kind == ts.SyntaxKind.Identifier) {
-                                let identifier = func as ts.Identifier;
-                                if (identifier.text == 'Input') {
-                                    let name = this.nodeString.identifier( propertyDeclaration.name );
-                                    processContext.currentClass.inputs.push( {
-                                        name,
-                                        type: propertyDeclaration.type
-                                    } );
-                                    return null; // remove property declaration
+                    if (processContext.currentClass.isComponent) {
+                        let componentClass = processContext.currentClass as ComponentDeclaration;
+                        let propertyDeclaration = node as ts.PropertyDeclaration;
+                        let decorators = propertyDeclaration.decorators as ts.NodeArray<ts.Decorator>;
+                        if (decorators) for (let decorator of decorators) {
+                            if (decorator.expression.kind == ts.SyntaxKind.CallExpression)  {
+                                let callExpression = decorator.expression as ts.CallExpression;
+                                let func = callExpression.expression;
+                                if (func.kind == ts.SyntaxKind.Identifier) {
+                                    let identifier = func as ts.Identifier;
+                                    if (identifier.text == 'Input') {
+                                        let name = this.nodeString.identifier( propertyDeclaration.name );
+                                        componentClass.inputs.push( {
+                                            name,
+                                            type: propertyDeclaration.type
+                                        } );
+                                        return null; // remove property declaration
+                                    }
                                 }
                             }
                         }
@@ -280,6 +283,7 @@ export class SrcFile {
                     let componentDeclaration : ComponentDeclaration; // hp.ParseTreeResult;
                     componentDeclaration = this.findComponentDeclaration(clazz, context.factory, processContext);
                     if (componentDeclaration!=null) {
+                        sourceFile.needsEmit = true;
                         processContext.currentClass = componentDeclaration;
                         let templateExpr : ts.Expression; // hp.ParseTreeResult;
                         templateExpr = this.html.translateTemplate(context.factory, componentDeclaration.templateUrl);
@@ -288,13 +292,10 @@ export class SrcFile {
                         let newClassName = this.capitalizeSelector( componentDeclaration.selector );
                         let newClassNameNode = context.factory.createIdentifier( newClassName );
                         let className = this.nodeString.identifier(clazz.name);
-                        program.classes.set(className, componentDeclaration);
-                        program.fileClasses.add(processContext.fileName, componentDeclaration);
-                        program.classRename.set(className, newClassName);
-                        program.componentLocation.set(newClassName,processContext.fileName);
-                        program.selectorClass.set( componentDeclaration.selector, newClassName );
                         componentDeclaration.name = newClassName;
-                        program.classes.set(newClassName, componentDeclaration);
+                        sourceFile.classes.push( componentDeclaration );
+                        program.classRename.set(className, newClassName);
+
                         return context.factory.updateClassDeclaration(
                             clazz,
                             ts.visitNodes(clazz.decorators, visit, ts.isDecorator), 
@@ -314,8 +315,8 @@ export class SrcFile {
             }
         };
 
-        let res = ts.transform(node, [ trans ]);
-        return res.transformed[0] as ts.SourceFile;
+        let res = ts.transform(sourceFile.sourceFile, [ trans ]);
+        sourceFile.sourceFile = res.transformed[0] as ts.SourceFile;
         //let sourceString = printer.printNode(ts.EmitHint.SourceFile, res.transformed[0], sf)
     }
 
@@ -333,8 +334,8 @@ export class SrcFile {
         return importDeclaration;
     }
 
-    public fixDecklarations(node : ts.SourceFile, program: Program) : ts.SourceFile {
-        let currentClass : ComponentDeclaration;
+    public fixDecklarations(sourceFile : SourceFile, program: Program) {
+        let currentClass : ClassDeclaration;
         let imports = new MapArray<string,string>();
         let trans = (context:ts.TransformationContext) => {
             const visit: ts.Visitor = node => {
@@ -342,10 +343,11 @@ export class SrcFile {
                 if (node.kind==ts.SyntaxKind.ClassDeclaration) {
                     let classDeclaration = node as ts.ClassDeclaration;
                     let className = this.nodeString.identifier(classDeclaration.name);
-                    currentClass = program.classes.get(className);
+                    currentClass = program.findClassByName(className);
                     if (currentClass.isComponent) {
+                        let componentClass = currentClass as ComponentDeclaration
                         let typeArguments = undefined;
-                        if (currentClass.inputs.length>0) {
+                        if (componentClass.inputs.length>0) {
                             let clazzIdent = context.factory.createIdentifier(className+'Props');
                             let clazz = context.factory.createTypeReferenceNode(clazzIdent);
                             typeArguments = [clazz];
@@ -374,10 +376,11 @@ export class SrcFile {
                 }
                 if (node.kind == ts.SyntaxKind.PropertyAccessExpression) {
                     let propertyAccessExpression = node as ts.PropertyAccessExpression;
-                    if (currentClass) {
+                    if (currentClass && currentClass.isComponent) {
+                        let componentClass = currentClass as ComponentDeclaration;
                         let name = this.nodeString.identifier( propertyAccessExpression.name );
                         if (propertyAccessExpression.expression.kind == ts.SyntaxKind.ThisKeyword) {
-                            for (let input of currentClass.inputs ) {
+                            for (let input of componentClass.inputs ) {
                                 if (input.name == name) {                        
                                     // this.name --> this.props.name
                                     let prop = context.factory.createIdentifier('props');
@@ -392,11 +395,11 @@ export class SrcFile {
                 }
                 if (node.kind == ts.SyntaxKind.SourceFile) {
                     let node2 = ts.visitEachChild(node, visit, context);
-                    let sourceFile = node2 as ts.SourceFile;
+                    let tsSourceFile = node2 as ts.SourceFile;
 
                     let newImports = [];
                     imports.forEach( (values,key) => {
-                        let srcDir = path.dirname(sourceFile.fileName);
+                        let srcDir = path.dirname(tsSourceFile.fileName);
                         let outFileName = path.relative(srcDir,key);
                         let ext = path.extname(outFileName);
                         outFileName = './' + outFileName.substr(0,outFileName.length-ext.length);
@@ -405,42 +408,46 @@ export class SrcFile {
                     });
 
                     let propsClasses = [];
-                    let classes = program.fileClasses.get(sourceFile.fileName);
-                    if (classes != null) for (let clazz of classes) {
-                        if (clazz.inputs.length>0) {
-                            let declarations = [];
-                            for (let input of clazz.inputs) {
-                                // TODO use actual type
-                                let propType = input.type; // context.factory.createToken(ts.SyntaxKind.AnyKeyword);         
-                                let propertyDeclaration = context.factory.createPropertyDeclaration(null,null,input.name,context.factory.createToken(ts.SyntaxKind.QuestionToken),propType,null);
-                                declarations.push(propertyDeclaration);
+                    //let classes = program.fileClasses.get(tsSourceFile.fileName);
+                    for (let clazz of sourceFile.classes) {
+                        if (currentClass.isComponent) {
+                            let componentClass = currentClass as ComponentDeclaration;
+                            if (componentClass.inputs.length>0) {
+                                let declarations = [];
+                                for (let input of componentClass.inputs) {
+                                    // TODO use actual type
+                                    let propType = input.type; // context.factory.createToken(ts.SyntaxKind.AnyKeyword);         
+                                    let propertyDeclaration = context.factory.createPropertyDeclaration(null,null,input.name,context.factory.createToken(ts.SyntaxKind.QuestionToken),propType,null);
+                                    declarations.push(propertyDeclaration);
+                                }
+                                let propClass = context.factory.createClassDeclaration(
+                                    null,null,clazz.name + 'Props',null,null,declarations
+                                );
+                                propsClasses.push(propClass);
                             }
-                            let propClass = context.factory.createClassDeclaration(
-                                null,null,clazz.name + 'Props',null,null,declarations
-                            );
-                            propsClasses.push(propClass);
                         }
                     }
 
-                    let statements = [...newImports, ...propsClasses, ...sourceFile.statements];
+                    let statements = [...newImports, ...propsClasses, ...tsSourceFile.statements];
                     
                     return context.factory.updateSourceFile(
-                        sourceFile,
+                        tsSourceFile,
                         statements,
-                        sourceFile.isDeclarationFile,
-                        sourceFile.referencedFiles,
-                        sourceFile.typeReferenceDirectives,
-                        sourceFile.hasNoDefaultLib,
-                        sourceFile.libReferenceDirectives
+                        tsSourceFile.isDeclarationFile,
+                        tsSourceFile.referencedFiles,
+                        tsSourceFile.typeReferenceDirectives,
+                        tsSourceFile.hasNoDefaultLib,
+                        tsSourceFile.libReferenceDirectives
                     );
                 } else if (node.kind == ts.SyntaxKind.JsxOpeningElement) {
                     let openingElement = node as ts.JsxOpeningElement;
                     let tagName = this.nodeString.identifier(openingElement.tagName);
-                    let newTagName = program.selectorClass.get(tagName);
-                    if (newTagName!=null) {
-                        imports.add(program.componentLocation.get(newTagName), newTagName);
+                    let clazz = program.findClassBySelector(tagName);
+                    if (clazz!=null) {
+                        let sourceFile = program.findSourceFileByClassName(clazz.name);
+                        imports.add(sourceFile.sourceFile.fileName, clazz.name);
                         return context.factory.createJsxOpeningElement(
-                            context.factory.createIdentifier(newTagName),
+                            context.factory.createIdentifier(clazz.name),
                             openingElement.typeArguments,
                             openingElement.attributes
                         )
@@ -448,10 +455,10 @@ export class SrcFile {
                 } else if (node.kind == ts.SyntaxKind.JsxClosingElement) {
                     let closingElement = node as ts.JsxClosingElement;
                     let tagName = this.nodeString.identifier(closingElement.tagName);
-                    let newTagName = program.selectorClass.get(tagName);
-                    if (newTagName!=null) {
+                    let clazz = program.findClassBySelector(tagName);
+                    if (clazz!=null) {
                         return context.factory.createJsxClosingElement(
-                            context.factory.createIdentifier(newTagName)
+                            context.factory.createIdentifier(clazz.name)
                         )
                     }
                 }
@@ -462,8 +469,8 @@ export class SrcFile {
                 return ts.visitNode(node, visit);
             }
         };
-        let res = ts.transform(node, [ trans ]);
-        return res.transformed[0] as ts.SourceFile;
+        let res = ts.transform(sourceFile.sourceFile, [ trans ]);
+        sourceFile.sourceFile = res.transformed[0] as ts.SourceFile;
     }
 
     public emit(node : ts.SourceFile) : string {
