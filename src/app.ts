@@ -76,7 +76,6 @@ export class App {
         let sfs : readonly ts.SourceFile[] = tsProgram.getSourceFiles();
         for (let sf of sfs) {
             if (fileNames.includes(sf.fileName)) continue; // ignore main.ts file
-            if (sf.fileName.indexOf('.module.')>0) continue; // ignore modules
             if (sf.fileName.indexOf('/node_modules/')<0) {
                 if (sf.fileName.endsWith('user.component.ts')) {
                     this.srcFile.show(sf);

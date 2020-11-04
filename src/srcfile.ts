@@ -344,7 +344,7 @@ export class SrcFile {
                     let classDeclaration = node as ts.ClassDeclaration;
                     let className = this.nodeString.identifier(classDeclaration.name);
                     currentClass = program.findClassByName(className);
-                    if (currentClass.isComponent) {
+                    if (currentClass && currentClass.isComponent) {
                         let componentClass = currentClass as ComponentDeclaration
                         let typeArguments = undefined;
                         if (componentClass.inputs.length>0) {
