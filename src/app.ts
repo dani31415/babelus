@@ -6,6 +6,11 @@ import { SrcFile } from './srcfile';
 import { Html } from './html';
 import { Program, SourceFile } from './program';
 
+import { BaseFeature } from './features/base';
+import { IterateFeature } from './features/iterate';
+import { ComponentFeature } from './features/component';
+import { InputFeature } from './features/input';
+
 export class App {
     constructor(private srcFile:SrcFile, private html:Html) {
     }
@@ -86,12 +91,26 @@ export class App {
             }
         }
 
+        let features = [
+            new BaseFeature(),
+            new ComponentFeature(),
+            new InputFeature(),
+            new IterateFeature()
+        ]
+
         for (let i=0;i<program.sourceFiles.length;i++) {
-            this.srcFile.process2(program.sourceFiles[i], program);
+            console.log(program.sourceFiles[i].sourceFile.fileName);
+            //this.srcFile.process2(program.sourceFiles[i], program);
         }
 
         for (let i=0;i<program.sourceFiles.length;i++) {
-            this.srcFile.fixDecklarations(program.sourceFiles[i], program);
+            this.srcFile.analysis(program.sourceFiles[i], program, features);
+            //this.srcFile.process2(program.sourceFiles[i], program);
+        }
+
+        for (let i=0;i<program.sourceFiles.length;i++) {
+            this.srcFile.declarations(program.sourceFiles[i], program, features);
+            //this.srcFile.fixDecklarations(program.sourceFiles[i], program);
         }
 
         for (let i=0;i<program.sourceFiles.length;i++) {

@@ -8,6 +8,8 @@ export class Program {
     public classRename = new Map<string,string>();
     public sourceFiles : SourceFile[];
 
+    public ignoreModules = [ '@angular/core' ]; 
+
     public findClassByName(className : string) : ClassDeclaration  {
         let newName = this.classRename.get(className);
         if (newName) {
@@ -20,12 +22,11 @@ export class Program {
         }
     }
 
-    public findClassBySelector(selector : string) : ComponentDeclaration  {
+    public findClassBySelector(selector : string) : ClassDeclaration  {
         for (let sourceFile of this.sourceFiles) {
             for (let clazz of sourceFile.classes) {
                 if (clazz.isComponent) {
-                    let classComponent = clazz as ComponentDeclaration;
-                    if (classComponent.selector == selector) return classComponent;
+                    if (clazz.selector == selector) return clazz;
                 }
             }
         }
@@ -56,15 +57,22 @@ export class SourceFile {
     public sourceFile: ts.SourceFile;
     public needsEmit: boolean;
     public classes : ClassDeclaration[] = [];
+    public imports = new MapArray<string,string>();
 }
 
 export class ClassDeclaration {
     name: string;
     isComponent: boolean;
-}
-
-export class ComponentDeclaration extends ClassDeclaration {
     selector?: string;
     templateUrl?: string;
-    inputs: InputDeclaration[];
+    inputs: InputDeclaration[] = [];
+}
+
+export class Context {
+    fileName: string;
+    currentClass: ClassDeclaration;
+    sourceFile : SourceFile;
+    factory: ts.NodeFactory;
+    transformationContext: ts.TransformationContext;
+    visit: ts.Visitor;
 }
