@@ -19,7 +19,7 @@ export class DependencyInjectionFeature implements Feature {
     analysis(node:ts.Node, context:pr.Context, program:pr.Program) : ts.Node {
         // Upddate constructor, store injected parameters and mark class as required
         if (ts.isConstructorDeclaration(node)) {
-            if (context.currentClass.isComponent) {
+            if (context.currentClass.isComponent || context.currentClass.isInjectable) {
                 for (let parameter of node.parameters) {
                     if (ts.isIdentifier(parameter.name) && 
                     ts.isTypeReferenceNode(parameter.type) &&
@@ -32,16 +32,23 @@ export class DependencyInjectionFeature implements Feature {
                         });
                     }
                 }
+                let block;
+                let propDeclarations;
                 // Replace arguments and add super()
-                let superCall = getCallSuper(context.factory);
-                let block = context.factory.createBlock( [ superCall, ...node.body.statements ], true );
-                let anyToken = context.factory.createToken(ts.SyntaxKind.AnyKeyword);
-                let propDeclaration = context.factory.createParameterDeclaration( undefined, undefined, undefined, 'props', undefined, anyToken, undefined );
+                if (context.currentClass.isComponent) {
+                    let superCall = getCallSuper(context.factory);
+                    block = context.factory.createBlock( [ superCall, ...node.body.statements ], true );
+                    let anyToken = context.factory.createToken(ts.SyntaxKind.AnyKeyword);
+                    propDeclarations = [ context.factory.createParameterDeclaration( undefined, undefined, undefined, 'props', undefined, anyToken, undefined ) ];
+                } else {
+                    block = node.body;
+                    propDeclarations = [];
+                }
                 return context.factory.updateConstructorDeclaration(
                     node,
                     node.decorators,
                     node.modifiers,
-                    [ propDeclaration ],
+                    propDeclarations,
                     block
                 )
             }
