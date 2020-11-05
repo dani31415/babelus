@@ -10,17 +10,27 @@ import { BaseFeature } from './features/base';
 import { IterateFeature } from './features/iterate';
 import { ComponentFeature } from './features/component';
 import { InputFeature } from './features/input';
+import { DependencyInjectionFeature } from './features/dependency-injection';
 
 export class App {
     constructor(private srcFile:SrcFile, private html:Html) {
     }
 
-    public emitFile(sourceFile: ts.SourceFile, program : Program) {
+    public emitFile(sourceFile: SourceFile, program : Program) {
         //this.srcFile.show(sourceFile);
-        let sourceString = this.srcFile.emit(sourceFile);
+        let sourceString = this.srcFile.emit(sourceFile.sourceFile);
 
         // Get output file name
-        let outFileName = path.relative(program.srcDir,sourceFile.fileName) + 'x';
+        let outFileName = path.relative(program.srcDir,sourceFile.sourceFile.fileName);
+
+        // Change extension to tsx
+        for (let clazz of sourceFile.classes) {
+            if (clazz.isComponent) {
+                outFileName += 'x'
+                break; // only once
+            }
+        }
+
         //let outFileName = path.basename(sourceFile.fileName)+'x';
         let outFile = path.join(program.outDir,outFileName);
         //console.log(outFile);
@@ -82,7 +92,7 @@ export class App {
         for (let sf of sfs) {
             if (fileNames.includes(sf.fileName)) continue; // ignore main.ts file
             if (sf.fileName.indexOf('/node_modules/')<0) {
-                if (sf.fileName.endsWith('user.component.ts')) {
+                if (sf.fileName.endsWith('app.component.ts')) {
                     this.srcFile.show(sf);
                 }
                 let sourceFile = new SourceFile();
@@ -95,27 +105,25 @@ export class App {
             new BaseFeature(),
             new ComponentFeature(),
             new InputFeature(),
+            new DependencyInjectionFeature(),
             new IterateFeature()
         ]
 
-        for (let i=0;i<program.sourceFiles.length;i++) {
-            console.log(program.sourceFiles[i].sourceFile.fileName);
-            //this.srcFile.process2(program.sourceFiles[i], program);
+        for (let sourceFile of program.sourceFiles) {
+            console.log(sourceFile.sourceFile.fileName);
         }
 
-        for (let i=0;i<program.sourceFiles.length;i++) {
-            this.srcFile.analysis(program.sourceFiles[i], program, features);
-            //this.srcFile.process2(program.sourceFiles[i], program);
+        for (let sourceFile of program.sourceFiles) {
+            this.srcFile.analysis(sourceFile, program, features);
         }
 
-        for (let i=0;i<program.sourceFiles.length;i++) {
-            this.srcFile.declarations(program.sourceFiles[i], program, features);
-            //this.srcFile.fixDecklarations(program.sourceFiles[i], program);
+        for (let sourceFile of program.sourceFiles) {
+            this.srcFile.declarations(sourceFile, program, features);
         }
 
-        for (let i=0;i<program.sourceFiles.length;i++) {
-            if ( program.sourceFiles[i].needsEmit ) {
-                this.emitFile(program.sourceFiles[i].sourceFile, program);
+        for (let sourceFile of program.sourceFiles) {
+            if ( sourceFile.needsEmit ) {
+                this.emitFile(sourceFile, program);
             }
         }
 

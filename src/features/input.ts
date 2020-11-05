@@ -58,8 +58,7 @@ export class InputFeature implements Feature {
                     if (clazz.inputs.length>0) {
                         let declarations = [];
                         for (let input of clazz.inputs) {
-                            // TODO use actual type
-                            let propType = input.type; // context.factory.createToken(ts.SyntaxKind.AnyKeyword);         
+                            let propType = input.type;
                             let propertyDeclaration = context.factory.createPropertyDeclaration(null,null,input.name,context.factory.createToken(ts.SyntaxKind.QuestionToken),propType,null);
                             declarations.push(propertyDeclaration);
                         }

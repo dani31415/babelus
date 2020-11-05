@@ -6,7 +6,8 @@ export class Program {
     public outDir : string;
 
     public classRename = new Map<string,string>();
-    public sourceFiles : SourceFile[];
+    public sourceFiles: SourceFile[];
+    public requireClasses: string[] = [];
 
     public ignoreModules = [ '@angular/core' ]; 
 
@@ -53,6 +54,11 @@ export class InputDeclaration {
     type: ts.TypeNode;
 }
 
+export class InjectField {
+    name: string;
+    className: string;
+}
+
 export class SourceFile {
     public sourceFile: ts.SourceFile;
     public needsEmit: boolean;
@@ -63,9 +69,11 @@ export class SourceFile {
 export class ClassDeclaration {
     name: string;
     isComponent: boolean;
+    isInjectable: boolean;
     selector?: string;
     templateUrl?: string;
     inputs: InputDeclaration[] = [];
+    injectedFields: InjectField[] = [];
 }
 
 export class Context {

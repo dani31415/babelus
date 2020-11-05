@@ -31,6 +31,13 @@ export class BaseFeature {
     }
 
     declarations(node : ts.Node, context:Context, program:Program) : ts.Node {
+        // Keep track of current class
+        if (ts.isClassDeclaration(node)) {
+            let className = helper.getText(node.name);
+            if (program.requireClasses.includes( className )) {
+                context.sourceFile.needsEmit = true;
+            }
+        }
         // Remove imports
         if (ts.isImportDeclaration(node)) {
             if (ts.isStringLiteral(node.moduleSpecifier)) {
