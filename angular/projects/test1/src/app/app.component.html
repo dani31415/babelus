@@ -1,7 +1,13 @@
 
 <div>
-    <span>{{title}}</span>
-     <span>{{4}} Hello world! {{title}} bla bla</span>
- a      <span>bye! {{title}}</span>
-    <span ngIf='x'>bye! {{user.name}}</span>
+    <span>
+        <b>Title: </b>{{title}}, 
+        <b>service name:</b> {{ userService.name }}, 
+        <b>service role:</b> {{ userService.role }}
+    </span>
+    <br>
+    <span><b>User name:</b> {{user.name}}</span>
+    <br>
+    <h3>AppUser</h3>
+    <app-user user='John Smith'></app-user>
 </div>
