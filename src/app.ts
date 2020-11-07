@@ -126,8 +126,5 @@ export class App {
                 this.emitFile(sourceFile, program);
             }
         }
-
-        console.log('Done!');
     }
-
 }

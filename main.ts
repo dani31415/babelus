@@ -9,4 +9,5 @@ let html = new Html();
 let app = new App(new SrcFile(html),html);
 
 console.log("Starting...");
-app.process('angular/projects/test1/src','main.ts', 'react-out/src');
+app.process('angular/projects/test1/src', 'main.ts', 'react-out/src');
+console.log('Done!');
