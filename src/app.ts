@@ -92,9 +92,9 @@ export class App {
         for (let sf of sfs) {
             if (fileNames.includes(sf.fileName)) continue; // ignore main.ts file
             if (sf.fileName.indexOf('/node_modules/')<0) {
-                if (sf.fileName.endsWith('app.component.ts')) {
+                /* if (sf.fileName.endsWith('app.component.ts')) {
                     this.srcFile.show(sf);
-                }
+                } */
                 let sourceFile = new SourceFile();
                 sourceFile.sourceFile = sf;
                 program.sourceFiles.push(sourceFile);
@@ -110,7 +110,7 @@ export class App {
         ]
 
         for (let sourceFile of program.sourceFiles) {
-            console.log(sourceFile.sourceFile.fileName);
+            console.log('Input file:',sourceFile.sourceFile.fileName);
         }
 
         for (let sourceFile of program.sourceFiles) {
@@ -127,7 +127,7 @@ export class App {
             }
         }
 
-    
+        console.log('Done!');
     }
 
 }

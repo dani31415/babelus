@@ -42,7 +42,7 @@ function findTemplate(clazz: ts.ClassDeclaration, context: pr.Context) : Templat
                 if (func.kind == ts.SyntaxKind.Identifier) {
                     let identifier = func as ts.Identifier;
                     if (identifier.text == 'Component') {
-                        console.log('Component found');
+                        //console.log('Component found');
                         if (callExpression.arguments.length>0) {
                             if (callExpression.arguments[0].kind!=ts.SyntaxKind.ObjectLiteralExpression) {
                                 throw "Expected ObjectLiteralExpression";
