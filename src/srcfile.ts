@@ -1,13 +1,12 @@
 import * as ts from 'typescript';
 
-import { Html } from './html';
 import { Program, SourceFile, Context } from './program';
 import { Feature } from './features/feature';
 
 const printer = ts.createPrinter();
 
 export class SrcFile {
-    public constructor(private html:Html) {
+    public constructor() {
     }
 
     public show(node : ts.Node) {

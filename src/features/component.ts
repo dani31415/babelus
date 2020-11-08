@@ -98,9 +98,7 @@ function findTemplate(clazz: ts.ClassDeclaration, context: pr.Context) : Templat
  * Removes @Component decorator.
  */
 export class ComponentFeature implements Feature {
-    html : Html;
-    constructor() {
-        this.html = new Html();
+    constructor(private html: Html) {
     }
     analysis(node : ts.Node, context: pr.Context, program: pr.Program) : ts.Node {
         if (ts.isClassDeclaration(node)) {

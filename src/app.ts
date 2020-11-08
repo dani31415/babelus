@@ -103,7 +103,7 @@ export class App {
 
         let features = [
             new BaseFeature(),
-            new ComponentFeature(),
+            new ComponentFeature(this.html),
             new InputFeature(),
             new DependencyInjectionFeature(),
             new IterateFeature()
