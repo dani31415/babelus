@@ -1,13 +1,7 @@
 // ts-node main.ts
-
-import { App } from './src/app';
-import { SrcFile } from './src/srcfile';
-import { Html } from './src/html';
-
-
-let html = new Html();
-let app = new App(new SrcFile(),html);
+import { AppBuilder } from './src/app-builder';
 
 console.log("Starting...");
+let app = AppBuilder.app();
 app.process('angular/projects/test1/src', 'main.ts', 'react-out/src');
 console.log('Done!');

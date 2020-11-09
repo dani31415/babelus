@@ -5,15 +5,10 @@ import * as path from 'path';
 import { SrcFile } from './srcfile';
 import { Html } from './html';
 import { Program, SourceFile } from './program';
-
-import { BaseFeature } from './features/base';
-import { IterateFeature } from './features/iterate';
-import { ComponentFeature } from './features/component';
-import { InputFeature } from './features/input';
-import { DependencyInjectionFeature } from './features/dependency-injection';
+import { Feature } from './features/feature';
 
 export class App {
-    constructor(private srcFile:SrcFile, private html:Html) {
+    constructor(private srcFile:SrcFile, private html:Html, private features:Feature[]) {
     }
 
     public emitFile(sourceFile: SourceFile, program : Program) {
@@ -101,24 +96,16 @@ export class App {
             }
         }
 
-        let features = [
-            new BaseFeature(),
-            new ComponentFeature(this.html),
-            new InputFeature(),
-            new DependencyInjectionFeature(),
-            new IterateFeature()
-        ]
-
         for (let sourceFile of program.sourceFiles) {
             console.log('Input file:',sourceFile.sourceFile.fileName);
         }
 
         for (let sourceFile of program.sourceFiles) {
-            this.srcFile.analysis(sourceFile, program, features);
+            this.srcFile.analysis(sourceFile, program, this.features);
         }
 
         for (let sourceFile of program.sourceFiles) {
-            this.srcFile.declarations(sourceFile, program, features);
+            this.srcFile.declarations(sourceFile, program, this.features);
         }
 
         for (let sourceFile of program.sourceFiles) {

@@ -1,7 +1,7 @@
 
 # Description
 
-This project is an automatic translator from a simple angular application into a rect applicaiton.
+This project is an automatic translator from a simple Angular application into a React application.
 
 This is still a working progress project.
 
