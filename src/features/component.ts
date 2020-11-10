@@ -104,7 +104,6 @@ export class ComponentFeature implements Feature {
         if (ts.isClassDeclaration(node)) {
             let templateResult = findTemplate(node, context);
             if (templateResult) {
-                context.sourceFile.needsEmit = true;
                 context.currentClass.isComponent = true;
                 context.currentClass.selector = templateResult.selector;
                 context.currentClass.templateUrl = templateResult.templateUrl;
@@ -118,7 +117,9 @@ export class ComponentFeature implements Feature {
                 // Rename
                 context.currentClass.name = newClassName;
                 program.classRename.set(className, newClassName);
+                program.requireClasses.push(newClassName);
 
+                context.sourceFile.importsTop.push(['react','React']);
                 let react = context.factory.createIdentifier('React');
                 let component = context.factory.createIdentifier('Component');
                 let reactComponent = context.factory.createPropertyAccessExpression(react,component);

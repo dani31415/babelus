@@ -1,3 +1,5 @@
+import path from "path";
+
 import * as ts from "typescript";
 import { MapArray } from './lib/maparray';
 
@@ -47,6 +49,20 @@ export class Program {
         }
     }
 
+    public findSourceFileByFileName(fileName: string) : SourceFile {
+        for (let sourceFile of this.sourceFiles) {
+            // Compute relative name without extension
+            let relativeFileName = './' + path.relative( this.srcDir, sourceFile.sourceFile.fileName );
+            let ext = path.extname( relativeFileName );
+            relativeFileName = relativeFileName.substring(0, relativeFileName.length-ext.length);
+
+            if (fileName == relativeFileName) {
+                return sourceFile;
+            }
+        }
+
+    }
+
 }
 
 export class InputDeclaration {
@@ -64,6 +80,8 @@ export class SourceFile {
     public needsEmit: boolean;
     public classes : ClassDeclaration[] = [];
     public imports = new MapArray<string,string>();
+    public importsTop : [key:string,value:string][] = [];
+    public fileDependencies : string[] = [];
 }
 
 export class ClassDeclaration {

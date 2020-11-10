@@ -91,6 +91,6 @@ export class SrcFile {
 
     public emit(node : ts.SourceFile) : string {
         let sourceString = printer.printNode(ts.EmitHint.SourceFile, node, node);
-        return "import React from 'react';\n" + sourceString;
+        return sourceString;
     }
 }

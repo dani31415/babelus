@@ -76,7 +76,11 @@ export class DependencyInjectionFeature implements Feature {
             if (context.currentClass) {
                 for (let injectedField of context.currentClass.injectedFields) {
                     let sourceFile = program.findSourceFileByClassName( injectedField.className );
-                    context.sourceFile.imports.add( sourceFile.sourceFile.fileName, injectedField.name );
+                    if (sourceFile!=null) {
+                        context.sourceFile.imports.add( sourceFile.sourceFile.fileName, injectedField.name );
+                    } else {
+                        console.log('Not found source file for ' + injectedField.className);
+                    }
                 }
             }
         }

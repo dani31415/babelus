@@ -53,6 +53,7 @@ export class App {
             experimentalDecorators: true,
             outDir: outDir,
             noEmit: true,
+            allowSyntheticDefaultImports:true,
 
             moduleResolution: ts.ModuleResolutionKind.NodeJs,
             jsx: ts.JsxEmit.Preserve
@@ -100,14 +101,17 @@ export class App {
             console.log('Input file:',sourceFile.sourceFile.fileName);
         }
 
+        console.log("Analysis...");
         for (let sourceFile of program.sourceFiles) {
             this.srcFile.analysis(sourceFile, program, this.features);
         }
 
+        console.log("Declarations...");
         for (let sourceFile of program.sourceFiles) {
             this.srcFile.declarations(sourceFile, program, this.features);
         }
 
+        console.log("Emiting...");
         for (let sourceFile of program.sourceFiles) {
             if ( sourceFile.needsEmit ) {
                 this.emitFile(sourceFile, program);
