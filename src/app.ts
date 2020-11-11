@@ -88,9 +88,9 @@ export class App {
         for (let sf of sfs) {
             if (fileNames.includes(sf.fileName)) continue; // ignore main.ts file
             if (sf.fileName.indexOf('/node_modules/')<0) {
-                /* if (sf.fileName.endsWith('app.component.ts')) {
+                if (sf.fileName.endsWith('app.component.ts')) {
                     this.srcFile.show(sf);
-                } */
+                }
                 let sourceFile = new SourceFile();
                 sourceFile.sourceFile = sf;
                 program.sourceFiles.push(sourceFile);
@@ -116,6 +116,13 @@ export class App {
             if ( sourceFile.needsEmit ) {
                 this.emitFile(sourceFile, program);
             }
+        }
+
+        console.log("Assets...");
+        for (let asset of program.assets) {
+            let src = path.join('redist',asset);
+            fs.copyFileSync(src,path.join(program.outDir,path.basename(src)));
+            console.log('Copy file:',asset+"...");
         }
     }
 }

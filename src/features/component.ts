@@ -22,6 +22,19 @@ function capitalizeSelector( className : string ) {
     return parts.join('');
 }
 
+function normailizeAttribute( name:string) : string {
+    let outName = '';
+    for (let i=0;i<name.length;i++) {
+        let c = name.charAt(i);
+        if (c == c.toLowerCase()) {
+            outName += c;
+        } else {
+            outName += '-'+c.toLowerCase();
+        }
+    }
+    return outName;
+}
+
 function render(factory : ts.NodeFactory, expr : ts.Expression) : ts.ClassElement {
     let returnStatment = factory.createReturnStatement(expr);
     let statements = [
@@ -158,6 +171,12 @@ export class ComponentFeature implements Feature {
                 let className = context.factory.createIdentifier('className');
                 return context.factory.updateJsxAttribute(node,className,node.initializer);
             }
+            let newAttrName = normailizeAttribute(attrName);
+            if (newAttrName!=attrName) {
+                let className = context.factory.createIdentifier(newAttrName);
+                return context.factory.updateJsxAttribute(node,className,node.initializer);
+            }
+
         }
         return node;
     }

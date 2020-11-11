@@ -3,6 +3,19 @@ import path from "path";
 import * as ts from "typescript";
 import { MapArray } from './lib/maparray';
 
+export class TagRule {
+    public selector: string;
+    public translate: string;
+    public importsTop: string;
+}
+
+export class ModuleReplace {
+    public pattern: string;
+    public name: string;
+    public file: string;
+    public symbolRename: [from:string, to:string][];
+}
+
 export class Program {
     public srcDir : string;
     public outDir : string;
@@ -13,13 +26,10 @@ export class Program {
 
     public ignoreModules = [ '@angular/core' ]; 
     public ignoreInteraces = [ 'OnInit' ];
-    public moduleReplace = [
-        {
-            name:'@angular/forms',
-            file:'forms'
-        }
-    ]
-
+    public moduleReplace : ModuleReplace[] = []
+    public tagRules : TagRule[] = [];
+    public assets: string[] = [];
+ 
     public findClassByName(className : string) : ClassDeclaration  {
         let newName = this.classRename.get(className);
         if (newName) {
@@ -87,7 +97,7 @@ export class SourceFile {
     public needsEmit: boolean;
     public classes : ClassDeclaration[] = [];
     public imports = new MapArray<string,string>();
-    public importsTop : [key:string,value:string][] = [];
+    public importsTop : [file:string,symbol:string][] = [];
     public fileDependencies : string[] = [];
 }
 

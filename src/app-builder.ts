@@ -8,12 +8,16 @@ import { App } from './app';
 import { SrcFile } from './srcfile';
 import { Html } from './html';
 import { CleanInterfaceFeature } from './features/clean-interface';
+import { MaterialFeature } from './features/material';
+import { TagsFeature } from './features/tags';
 
 export let AppBuilder = {
     app: function() {
         let html = new Html();
         let features : Feature[] = [
             new BaseFeature(),
+            new TagsFeature(),
+            new MaterialFeature(),
             new CleanInterfaceFeature(),
             new ComponentFeature(html),
             new InputFeature(),

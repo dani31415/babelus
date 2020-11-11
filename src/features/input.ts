@@ -65,7 +65,8 @@ export class InputFeature implements Feature {
                         let propClass = context.factory.createClassDeclaration(
                             null,null,clazz.name + 'Props',null,null,declarations
                         );
-                        propsClasses.push(propClass);
+                        let visited = context.visit(propClass);
+                        propsClasses.push(visited);
                     }
                 }
             }
