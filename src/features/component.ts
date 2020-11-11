@@ -151,6 +151,14 @@ export class ComponentFeature implements Feature {
                 }
             }
         }
+        // Replace class --> className
+        if (ts.isJsxAttribute(node)) {
+            let attrName = helper.getText(node.name);
+            if(attrName=='class') {
+                let className = context.factory.createIdentifier('className');
+                return context.factory.updateJsxAttribute(node,className,node.initializer);
+            }
+        }
         return node;
     }
 
