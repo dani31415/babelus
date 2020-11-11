@@ -7,12 +7,14 @@ import { Feature } from './features/feature';
 import { App } from './app';
 import { SrcFile } from './srcfile';
 import { Html } from './html';
+import { CleanInterfaceFeature } from './features/clean-interface';
 
 export let AppBuilder = {
     app: function() {
         let html = new Html();
         let features : Feature[] = [
             new BaseFeature(),
+            new CleanInterfaceFeature(),
             new ComponentFeature(html),
             new InputFeature(),
             new DependencyInjectionFeature(),

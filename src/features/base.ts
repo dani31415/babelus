@@ -29,9 +29,7 @@ function createImportTop(factory:ts.NodeFactory, symbol:string, file:string) : t
 function setNeedsEmit(sourceFile:SourceFile, program:Program) {
     if (sourceFile.needsEmit) return;
     sourceFile.needsEmit = true;
-    console.log("Needs emit:", sourceFile.sourceFile.fileName);
     for (let dependency of sourceFile.fileDependencies) {
-        console.log(sourceFile.sourceFile.fileName,dependency);
         let sf = program.findSourceFileByFileName(dependency);
         if (sf) {
             setNeedsEmit(sf, program);

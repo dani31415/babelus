@@ -12,6 +12,13 @@ export class Program {
     public requireClasses: string[] = [];
 
     public ignoreModules = [ '@angular/core' ]; 
+    public ignoreInteraces = [ 'OnInit' ];
+    public moduleReplace = [
+        {
+            name:'@angular/forms',
+            file:'forms'
+        }
+    ]
 
     public findClassByName(className : string) : ClassDeclaration  {
         let newName = this.classRename.get(className);
