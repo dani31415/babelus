@@ -23,7 +23,7 @@ let rules = [
     }
 ];
 
-let ignoreModules = [ '@angular/material/dialog', '@angular/cdk/drag-drop' ];
+let ignoreModules = [ ];
 
 let moduleReplace : pr.ModuleReplace[] = [
     {
@@ -31,6 +31,18 @@ let moduleReplace : pr.ModuleReplace[] = [
         name:'./forms',
         file:'./forms.ts',
         symbolRename: [['FormControl', 'FormCtrl']]
+    },
+    {
+        pattern:'@angular/material/dialog',
+        name:'./material',
+        file:'./material.ts',
+        symbolRename: []
+    },
+    {
+        pattern:'@angular/cdk/drag-drop',
+        name:'./drag-drop',
+        file:'./drag-drop.ts',
+        symbolRename: [ ['CdkDragDrop', 'DragDropEvent'] ]
     }
 ]
 

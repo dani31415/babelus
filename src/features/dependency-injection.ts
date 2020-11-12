@@ -15,6 +15,22 @@ function getCallSuper(factory: ts.NodeFactory) : ts.ExpressionStatement {
     return factory.createExpressionStatement(call);
 }
 
+function findImport(sourceFile:ts.SourceFile, symbol:string) : ts.Expression {
+    for (let statement of sourceFile.statements) {
+        if (ts.isImportDeclaration(statement)) {
+            if (statement.importClause.namedBindings) {
+                if (ts.isNamedImports(statement.importClause.namedBindings)) {
+                    for (let element of  statement.importClause.namedBindings.elements) {
+                        if (element.name.text==symbol) {
+                            return statement.moduleSpecifier;
+                        }
+                    }
+                }
+            }
+        }
+    }
+}
+
 export class DependencyInjectionFeature implements Feature {
     analysis(node:ts.Node, context:pr.Context, program:pr.Program) : ts.Node {
         // Upddate constructor, store injected parameters and mark class as required
@@ -26,10 +42,14 @@ export class DependencyInjectionFeature implements Feature {
                     ts.isIdentifier( parameter.type.typeName ) ) {
                         let className = helper.getText( parameter.type.typeName );
                         program.requireClasses.push( className );
+                        let varName = helper.getText( parameter.name );
                         context.currentClass.injectedFields.push ( { 
-                            name: helper.getText( parameter.name ), 
-                            className: className 
+                            name: varName
                         });
+                        let module = findImport(context.sourceFile.sourceFile, className);
+                        if (module!=null && ts.isStringLiteral(module)) {
+                            context.sourceFile.imports.add( module.text, varName );
+                        }
                     }
                 }
                 let block;
@@ -71,19 +91,6 @@ export class DependencyInjectionFeature implements Feature {
     }
 
     declarations(node:ts.Node, context:pr.Context, program:pr.Program) : ts.Node {
-        // Add imports for injected fields
-        if (ts.isClassDeclaration(node)) {
-            if (context.currentClass) {
-                for (let injectedField of context.currentClass.injectedFields) {
-                    let sourceFile = program.findSourceFileByClassName( injectedField.className );
-                    if (sourceFile!=null) {
-                        context.sourceFile.imports.add( sourceFile.sourceFile.fileName, injectedField.name );
-                    } else {
-                        console.log('Not found source file for ' + injectedField.className);
-                    }
-                }
-            }
-        }
         // Remove this from injected object access
         if (ts.isPropertyAccessExpression(node)) {
             if (context.currentClass && context.currentClass.injectedFields.length>0) {

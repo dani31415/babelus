@@ -9,6 +9,10 @@ export class MapArray<K,V> {
         return this.map.get(k);
     }
 
+    public set(k:K, v:V[]) {
+        this.map.set(k,v);
+    }
+
     public add(k:K, v:V) {
         let w : V[] = this.map.get(k);
         if (w==null) {

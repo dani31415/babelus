@@ -10,6 +10,7 @@ import { Html } from './html';
 import { CleanInterfaceFeature } from './features/clean-interface';
 import { MaterialFeature } from './features/material';
 import { TagsFeature } from './features/tags';
+import { AngularRouterFeature } from './features/angular-router';
 
 export let AppBuilder = {
     app: function() {
@@ -18,6 +19,7 @@ export let AppBuilder = {
             new BaseFeature(),
             new TagsFeature(),
             new MaterialFeature(),
+            new AngularRouterFeature(),
             new CleanInterfaceFeature(),
             new ComponentFeature(html),
             new InputFeature(),

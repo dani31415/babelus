@@ -4,6 +4,20 @@ import path from 'path';
 import * as pr from '../program';
 import { Feature } from "./feature";
 import * as helper from "../helper";
+import { MapArray } from '../lib/maparray';
+
+function relativeToCurrentFile(context: pr.Context, program: pr.Program, moduleName:string) : string {
+    if (moduleName.charAt(0)=='.') {
+        let moduleName0 = path.join(program.srcDir, moduleName);
+        let moduleName1 = path.relative(path.dirname(context.fileName),moduleName0);
+        if (!program.assets.includes(moduleName)) {
+            program.assets.push(moduleName);
+        }
+        return moduleName1;
+    } else {
+        return moduleName;
+    }
+}
 
 export class TagsFeature implements Feature {
     constructor() {
@@ -15,14 +29,8 @@ export class TagsFeature implements Feature {
                 let moduleName = node.moduleSpecifier.text;
                 for (let module of program.moduleReplace) {
                     if (module.pattern == moduleName) {
-                        let moduleName0 = path.join(program.srcDir, module.name);
-                        //console.log(moduleName);
-                        let moduleName = path.relative(path.dirname(context.fileName),moduleName0);
-                        console.log(path.dirname(context.fileName),moduleName0,moduleName);
+                        let moduleName = relativeToCurrentFile(context, program, module.name);
                         let newModule = context.factory.createStringLiteral(moduleName);
-                        if (!program.assets.includes(module.file)) {
-                            program.assets.push(module.file);
-                        }
                         for (let symbolRename of module.symbolRename) {
                             program.classRename.set(symbolRename[0], symbolRename[1]);
                         }
@@ -48,7 +56,12 @@ export class TagsFeature implements Feature {
                     if (rule.selector == text) {
                         let newTagName = context.factory.createIdentifier(rule.translate);
                         if (rule.importsTop) {
-                            context.sourceFile.importsTop.push([rule.importsTop,rule.translate]);
+                            let moduleName = relativeToCurrentFile(context, program, rule.importsTop);
+                            context.sourceFile.importsTop.push([moduleName,rule.translate]);
+                        }
+                        if (rule.imports) {
+                            let moduleName = relativeToCurrentFile(context, program, rule.imports);
+                            context.sourceFile.imports.add( moduleName, rule.translate );
                         }
                         return context.factory.updateJsxOpeningElement(node,newTagName,undefined,node.attributes);
                     }
@@ -67,6 +80,7 @@ export class TagsFeature implements Feature {
                 }
             }
         }
+        // Identifier rename
         if (ts.isIdentifier(node)) {
             let text = helper.getText(node);
             let newText = program.classRename.get(text);

@@ -6,7 +6,8 @@ import { MapArray } from './lib/maparray';
 export class TagRule {
     public selector: string;
     public translate: string;
-    public importsTop: string;
+    public importsTop?: string;
+    public imports?: string;
 }
 
 export class ModuleReplace {
@@ -89,7 +90,6 @@ export class InputDeclaration {
 
 export class InjectField {
     name: string;
-    className: string;
 }
 
 export class SourceFile {

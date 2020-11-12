@@ -38,3 +38,4 @@ npm start
 
 # Caveats
 - Added "strictPropertyInitialization": false to react tsconfig.json
+- Added "strict": false to react tsconfig.json
