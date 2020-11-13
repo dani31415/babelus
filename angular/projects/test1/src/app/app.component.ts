@@ -11,8 +11,7 @@ export class AppComponent implements OnInit {
   constructor(public userService : UserService) 
   {
     this.show = true;
-    //let m = [];
-    //m.map ( (a,b) => { return 'hi!' } );
+    this.className = 'blue';
   }
 
   ngOnInit() {
@@ -31,6 +30,7 @@ export class AppComponent implements OnInit {
   title = 'test1';
   show: boolean;
   items: ['1','2'];
+  className: string;
 
 }
 

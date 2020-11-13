@@ -17,7 +17,8 @@ import * as parse_util from '@angular/compiler/src/parse_util';
 
 let symbolToNode = {
     '||':ts.SyntaxKind.BarBarToken,
-    '&&':ts.SyntaxKind.AmpersandAmpersandToken
+    '&&':ts.SyntaxKind.AmpersandAmpersandToken,
+    '==':ts.SyntaxKind.EqualsEqualsToken
 };
 
 function visitEachChild(node:r3_ast.Node, visitor, context) {
@@ -125,17 +126,31 @@ export class Html {
 
     }
 
-    private createElement(factory: ts.NodeFactory, tagName: string, attributes: r3_ast.TextAttribute[], children: ts.JsxChild[]) : ts.JsxElement {
+    private createElement(factory: ts.NodeFactory, tagName: string, attributes: r3_ast.TextAttribute[], inputs: ts.JsxAttribute[], children: ts.JsxChild[]) : ts.JsxElement {
         let attributeNodes = attributes.map ( attribute => {
             let name = factory.createIdentifier(attribute.name)
             let value = factory.createStringLiteral(attribute.value);
             return factory.createJsxAttribute(name, value);
         });
+        attributeNodes = attributeNodes.concat ( inputs );
         let attributesNode = factory.createJsxAttributes( attributeNodes );
         let tag = factory.createIdentifier(tagName);
         let openDiv = factory.createJsxOpeningElement(tag, [], attributesNode); // factory.createJsxAttributes([]));
         let closeDiv = factory.createJsxClosingElement(tag);
         let element = factory.createJsxElement(openDiv,children,closeDiv);
+        return element;
+    }
+
+    private createOCElement(factory: ts.NodeFactory, tagName: string, attributes: r3_ast.TextAttribute[], inputs: ts.JsxAttribute[]) : ts.JsxSelfClosingElement {
+        let attributeNodes = attributes.map ( attribute => {
+            let name = factory.createIdentifier(attribute.name)
+            let value = factory.createStringLiteral(attribute.value);
+            return factory.createJsxAttribute(name, value);
+        });
+        attributeNodes = attributeNodes.concat ( inputs );
+        let attributesNode = factory.createJsxAttributes( attributeNodes );
+        let tag = factory.createIdentifier(tagName);
+        let element = factory.createJsxSelfClosingElement(tag, [], attributesNode); // factory.createJsxAttributes([]));
         return element;
     }
 
@@ -193,6 +208,14 @@ export class Html {
         let nodes : r3_ast.Node[];
         nodes = this.angularParseTemplate(fileName);
         let scopedVars = [];
+
+        let visitBoundAttribute = function(attribute : r3_ast.BoundAttribute) : ts.JsxAttribute {
+            let expr = attribute.value.visit(astVisitor);
+            let jsxExpr = factory.createJsxExpression(undefined, expr);
+            let ident = factory.createIdentifier(attribute.name);
+            return factory.createJsxAttribute(ident, jsxExpr);
+        }
+
         let astVisitor =  {
             visitUnary: (ast: expr.Unary, context: any): ts.Expression => { 
                 return null; 
@@ -215,7 +238,25 @@ export class Html {
             },
             visitFunctionCall: (ast: expr.FunctionCall, context: any): ts.Expression => { return null; },
             visitImplicitReceiver: (ast: expr.ImplicitReceiver, context: any): ts.Expression => { return null; },
-            visitInterpolation: (ast: expr.Interpolation, context: any): ts.Expression => { return null; },
+            visitInterpolation: (ast: expr.Interpolation, context: any): ts.Expression => { 
+                let visitedExpressions = ast.expressions.map( x => x.visit(astVisitor) );
+                let visitedStrings = ast.strings.map( x => x.length>0?factory.createStringLiteral(x):null );
+                let sum = [];
+                for (let i=0;i<visitedStrings.length;i++) {
+                    if (visitedStrings[i]!=null) {
+                        sum.push(visitedStrings[i]);
+                    }
+                    if (i<visitedExpressions.length) {
+                        sum.push(visitedExpressions[i]);
+                    }
+                }
+                let v = sum[0];
+                let plusToken = factory.createToken(ts.SyntaxKind.PlusToken);
+                for (let i=1;i<sum.length;i++) {
+                    v = factory.createBinaryExpression(v,plusToken,sum[i]);
+                }
+                return v;
+            },
             visitKeyedRead: (ast: expr.KeyedRead, context: any): ts.Expression => { return null; },
             visitKeyedWrite: (ast: expr.KeyedWrite, context: any): ts.Expression => { return null; },
             visitLiteralArray: (ast: expr.LiteralArray, context: any): ts.Expression => { return null; },
@@ -268,13 +309,12 @@ export class Html {
         let visitor = {
             visitElement: (element: r3_ast.Element) : ts.JsxChild[] => {
                 let visitedChildren : ts.JsxChild[][]  = r3_ast.visitAll(visitor, element.children);
+                let visitedInputs : ts.JsxAttribute[]  = element.inputs.map( visitBoundAttribute );
                 let content = element.sourceSpan.start.file.content;
                 // Interlace with blanks
                 let newChildren : ts.JsxChild[];
-                if (!element.endSourceSpan) { // <br>
-                    let tag = factory.createIdentifier(element.name);
-                    let outElement = factory.createJsxSelfClosingElement(tag,undefined,undefined);
-                    //let outElement = this.createElement(factory,element.name,[]);
+                if (!element.endSourceSpan) { // <br>, <input>, <img>
+                    let outElement = this.createOCElement(factory,element.name,element.attributes,visitedInputs);
                     return [
                         ...this.createText(factory, this.beginBlanks(element.startSourceSpan)),
                         outElement,
@@ -292,7 +332,7 @@ export class Html {
                 newChildren = newChildren.concat( [ ...this.createText(factory, content.substring(start,element.endSourceSpan.start.offset)) ] );
                 newChildren = newChildren.concat( [ ...this.createText(factory, this.beginBlanks(element.endSourceSpan)) ] );
 
-                let outElement = this.createElement(factory,element.name,element.attributes,newChildren);
+                let outElement = this.createElement(factory,element.name,element.attributes,visitedInputs,newChildren);
 
                 return [
                     ...this.createText(factory, this.beginBlanks(element.startSourceSpan)),
@@ -398,7 +438,7 @@ export class Html {
                 result = result.expression;
             }
         } else {
-            result = this.createElement(factory, 'React.Fragment', [], results);
+            result = this.createElement(factory, 'React.Fragment', [], [], results);
         }
 
         return result;
