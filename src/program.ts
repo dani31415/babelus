@@ -26,7 +26,7 @@ export class Program {
     public requireClasses: string[] = [];
 
     public ignoreModules = [ '@angular/core' ]; 
-    public ignoreInteraces = [ 'OnInit' ];
+    public ignoreInteraces = [ 'OnInit', 'OnChanges' ];
     public moduleReplace : ModuleReplace[] = []
     public tagRules : TagRule[] = [];
     public assets: string[] = [];

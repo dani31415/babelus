@@ -11,6 +11,8 @@ import { CleanInterfaceFeature } from './features/clean-interface';
 import { MaterialFeature } from './features/material';
 import { TagsFeature } from './features/tags';
 import { AngularRouterFeature } from './features/angular-router';
+import { NgxIndexedDbFeature } from './features/ngx-indexed-db';
+import { CkEditorFeature } from './features/ckeditor';
 
 export let AppBuilder = {
     app: function() {
@@ -20,6 +22,8 @@ export let AppBuilder = {
             new TagsFeature(),
             new MaterialFeature(),
             new AngularRouterFeature(),
+            new NgxIndexedDbFeature(),
+            new CkEditorFeature(),
             new CleanInterfaceFeature(),
             new ComponentFeature(html),
             new InputFeature(),

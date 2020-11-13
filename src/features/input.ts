@@ -15,7 +15,7 @@ export class InputFeature implements Feature {
                     if (ts.isCallExpression(decorator.expression))  {
                         let identifier = decorator.expression.expression;
                         if (ts.isIdentifier(identifier)) {
-                            if (identifier.text == 'Input' && ts.isIdentifier(node.name)) {
+                            if ((identifier.text == 'Input' || identifier.text == 'Output') && ts.isIdentifier(node.name)) {
                                 let name = helper.getText(node.name);
                                 componentClass.inputs.push( {
                                     name,

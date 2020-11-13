@@ -1,9 +1,13 @@
-export class FormCtrl {
-    constructor(formState?: any, validatorOrOpts?: any) {
-
-    }
+export class AbstractControl {
+    public value:any;
     public setValue(value:any) {
 
+    }
+}
+
+export class FormCtrl extends AbstractControl {
+    constructor(formState?: any, validatorOrOpts?: any) {
+        super();
     }
 }
 
@@ -13,13 +17,14 @@ export class Validators {
 
 export class FormGroup {
     constructor(controls: {
-        [key: string]: FormCtrl;
+        [key: string]: AbstractControl;
     }) {
 
     }
     public controls: any;
+    public invalid: boolean;
 
-    public get(key:string) : FormCtrl {
+    public get(key:string) : AbstractControl {
         return null;
     }
 }
