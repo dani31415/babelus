@@ -15,6 +15,23 @@ import { DefaultImportTracker, NoopImportRewriter } from '@angular/compiler-cli/
 import * as expr from '@angular/compiler/src/expression_parser/ast';
 import * as parse_util from '@angular/compiler/src/parse_util';
 
+let symbolToNode = {
+    '||':ts.SyntaxKind.BarBarToken,
+    '&&':ts.SyntaxKind.AmpersandAmpersandToken
+};
+
+function visitEachChild(node:r3_ast.Node, visitor, context) {
+
+}
+
+function flat<T>(M:T[][]) : T[] {
+    let r = [];
+    for (let v of M) {
+        r = r.concat(v);
+    }
+    return r;
+}
+
 export class Html {
     public process(fileName : string) : hp.ParseTreeResult {
         this.process2(fileName);
@@ -175,13 +192,27 @@ export class Html {
     public translateTemplate(factory : ts.NodeFactory, fileName : string) : ts.Expression {
         let nodes : r3_ast.Node[];
         nodes = this.angularParseTemplate(fileName);
+        let scopedVars = [];
         let astVisitor =  {
-            visitUnary: (ast: expr.Unary, context: any): ts.Expression => { return null; },
+            visitUnary: (ast: expr.Unary, context: any): ts.Expression => { 
+                return null; 
+            },
             visitBinary: (ast: expr.Binary, context: ts.Expression): ts.Expression => {
-                 return null; 
+                let kind = symbolToNode[ast.operation];
+                if (kind==null) {
+                    console.log("Unknown operation: " + ast.operation);
+                    //throw "Unknown operation '" + ast.operation + '"';
+                }
+                let leftExpr = ast.left.visit(astVisitor);
+                let rightExpr = ast.right.visit(astVisitor);
+                return factory.createBinaryExpression(leftExpr, kind, rightExpr);
             },
             visitChain: (ast: expr.Chain, context: any): ts.Expression => { return null; },
-            visitConditional: (ast: expr.Conditional, context: any): ts.Expression => { return null; },
+            visitConditional: (ast: expr.Conditional, context: any): ts.Expression => { 
+                return null; 
+                 return null; 
+                return null; 
+            },
             visitFunctionCall: (ast: expr.FunctionCall, context: any): ts.Expression => { return null; },
             visitImplicitReceiver: (ast: expr.ImplicitReceiver, context: any): ts.Expression => { return null; },
             visitInterpolation: (ast: expr.Interpolation, context: any): ts.Expression => { return null; },
@@ -192,6 +223,12 @@ export class Html {
             visitLiteralPrimitive: (ast: expr.LiteralPrimitive, context: any): ts.Expression => { 
                 if (typeof(ast.value)=='number') {
                     return factory.createNumericLiteral(ast.value);
+                } else if (typeof(ast.value)=='boolean') {
+                    if (ast.value) {
+                        return factory.createToken(ts.SyntaxKind.TrueKeyword);
+                    } else {
+                        return factory.createToken(ts.SyntaxKind.FalseKeyword);
+                    }
                 } else {
                     return factory.createStringLiteral(""+ast.value);
                 }
@@ -205,6 +242,9 @@ export class Html {
                 let parent : ts.Expression;
                 if (receiver instanceof expr.ImplicitReceiver) {
                     parent = factory.createThis();
+                    if (scopedVars.includes(ast.name)) {
+                        return factory.createIdentifier(ast.name);
+                    }
                 } else {
                     parent = receiver.visit(astVisitor);
                 }
@@ -259,7 +299,64 @@ export class Html {
                     outElement,
                     ...this.createText(factory, this.endBlanks(element.endSourceSpan))];
             },
-            visitTemplate: function(template: r3_ast.Template): ts.JsxChild[] { return null; },
+            visitTemplate: (template: r3_ast.Template): ts.JsxChild[] => {
+                // Get children as jsxChild
+                let expression: ts.Expression;
+
+                for (let attr of template.templateAttrs) {
+                    if (attr instanceof r3_ast.BoundAttribute) {
+                        if (attr.name=='ngIf') {
+                            let value : expr.ASTWithSource = attr.value as expr.ASTWithSource;
+                            let expr : ts.Expression = value.visit(astVisitor);
+
+                            let children = flat( r3_ast.visitAll(visitor, template.children) );
+                            if (children.length!=1 ) {
+                                throw "Expected single children";
+                            }
+                            let child = children[0];
+                            if (ts.isJsxElement(child)) {
+                                expression = factory.createBinaryExpression(expr,ts.SyntaxKind.AmpersandAmpersandToken,child);
+                            }
+                        } else if (attr.name=='ngForOf') {
+                            // Visit children 
+                            let vars = template.variables.map( x => x.name );
+                            let oldScopedVars = scopedVars;
+                            scopedVars = scopedVars.concat(vars);
+                            let children = flat( r3_ast.visitAll(visitor, template.children) );
+                            scopedVars = oldScopedVars; // restore vars
+                            if (children.length!=1 ) {
+                                throw "Expected single children";
+                            }
+                            let child = children[0];
+                            if (ts.isJsxElement(child)) {
+                                let value : expr.ASTWithSource = attr.value as expr.ASTWithSource;
+                                let list : ts.Expression = value.visit(astVisitor);
+                                
+                                //template.variables;
+                                let map = factory.createPropertyAccessExpression(list,'map');
+                                    let statement = factory.createReturnStatement( child );
+                                let body = factory.createBlock( [ statement ] );
+                                let vars : ts.ParameterDeclaration[] = [];
+                                for (let v of template.variables) {
+                                    let ident = factory.createIdentifier( v.name );
+                                    vars.push( 
+                                        factory.createParameterDeclaration(undefined,undefined,undefined,ident,undefined,undefined)
+                                    );
+                                }
+                                let func = factory.createArrowFunction(undefined,undefined,vars,undefined,
+                                  factory.createToken(ts.SyntaxKind.EqualsGreaterThanToken), body);
+                                expression = factory.createCallExpression( map, null, [ func ] );
+                            }
+                            // list.map ( variables => {} )
+                        } else {
+                            //throw "Do not know what to do!";
+                        }
+                    } else {
+                        console.log("Incorrect attribute type for " + attr.name);
+                    }
+                }
+                return [factory.createJsxExpression(undefined,expression)];
+            },
             visitContent: function(content: r3_ast.Content): ts.JsxChild[] { return null; },
             visitVariable: function(variable: r3_ast.Variable): ts.JsxChild[] { return null; },
             visitReference: function(reference: r3_ast.Reference): ts.JsxChild[] { return null; },
@@ -294,9 +391,12 @@ export class Html {
         resultss = r3_ast.visitAll(visitor,nodes);
         let results : ts.JsxChild[];
         results = this.flat( resultss );
-        let result : ts.JsxElement;
+        let result : ts.Expression;
         if (results.length==1) {
             result = results[0] as ts.JsxElement;
+            if (ts.isJsxExpression(result)) {
+                result = result.expression;
+            }
         } else {
             result = this.createElement(factory, 'React.Fragment', [], results);
         }

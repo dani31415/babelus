@@ -20,6 +20,21 @@ let rules = [
         selector:'mat-label',
         translate:'InputLabel',
         importsTop:'@material-ui/core/InputLabel'
+    },
+    {
+        selector:'mat-card',
+        translate:'Card',
+        importsTop:'@material-ui/core/Card'
+    },
+    {
+        selector:'mat-hint',
+        translate:'FormHelperText',
+        importsTop:'@material-ui/core/FormHelperText'
+    },
+    {
+        selector:'mat-error',
+        translate:'FormHelperText',
+        importsTop:'@material-ui/core/FormHelperText'
     }
 ];
 

@@ -53,7 +53,25 @@ function createImport(factory:ts.NodeFactory, node:ts.SourceFile, symbols:string
     }
 }
 
-function createImportTop(factory:ts.NodeFactory, symbol:string, file:string) : ts.ImportDeclaration {
+function containsImportTop(node:ts.SourceFile, symbol:string, file:string) : boolean {
+    for (let statement of node.statements) {
+        if (ts.isImportDeclaration(statement)) {
+            if (ts.isStringLiteral(statement.moduleSpecifier)) {
+                if (statement.moduleSpecifier.text != file ) continue;
+            }
+            if (statement.importClause.name) {
+                let text = helper.getText(statement.importClause.name);
+                if (text==symbol) return true;
+            }
+        }
+    }
+    return false;
+}
+
+function createImportTop(factory:ts.NodeFactory, node:ts.SourceFile, symbol:string, file:string) : ts.ImportDeclaration {
+    if (containsImportTop(node,symbol,file)) {
+        return null;
+    }
     let namedImports = factory.createIdentifier(symbol);
     let importClause = factory.createImportClause(false,namedImports,undefined);
     let stringLiteral = factory.createStringLiteral(file);
@@ -130,8 +148,10 @@ export class BaseFeature {
                     let ext = path.extname(outFileName);
                     outFileName = './' + outFileName.substr(0,outFileName.length-ext.length);
                 }
-                let statement = createImportTop(context.factory,value[1],outFileName);
-                newImports.push(statement);
+                let statement = createImportTop(context.factory,node,value[1],outFileName);
+                if (statement) { // null if imports are already satisfied
+                    newImports.push(statement);
+                }
             });
             context.sourceFile.imports.forEach( (values:string[],key:string) => {
                 for (let module of program.moduleReplace) {

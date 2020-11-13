@@ -57,7 +57,16 @@ export class TagsFeature implements Feature {
                         let newTagName = context.factory.createIdentifier(rule.translate);
                         if (rule.importsTop) {
                             let moduleName = relativeToCurrentFile(context, program, rule.importsTop);
-                            context.sourceFile.importsTop.push([moduleName,rule.translate]);
+                            let importTop : [file:string,symbol:string] = [moduleName,rule.translate];
+                            let found = false;
+                            for (let it of context.sourceFile.importsTop) {
+                                if (importTop[0] == it[0] && importTop[1]==it[1]) {
+                                    found = true;
+                                }
+                            }
+                            if (!found) {
+                                context.sourceFile.importsTop.push(importTop);
+                            }
                         }
                         if (rule.imports) {
                             let moduleName = relativeToCurrentFile(context, program, rule.imports);

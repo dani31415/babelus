@@ -1,5 +1,9 @@
 export class AbstractControl {
     public value:any;
+    public dirty:boolean;
+    public touched:boolean;
+    public invalid:boolean;
+    public errors:any;
     public setValue(value:any) {
 
     }

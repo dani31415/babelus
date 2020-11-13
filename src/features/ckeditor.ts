@@ -5,7 +5,13 @@ import * as pr from '../program';
 import { Feature } from "./feature";
 import * as helper from "../helper";
 
-let rules = [];
+let rules = [
+    {
+        selector:'ckeditor',
+        translate:'CkEditor',
+        imports:'./ckeditor'
+    }
+];
 
 let ignoreModules = [  ];
 

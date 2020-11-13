@@ -1,5 +1,9 @@
 
-<div>
+<div *ngIf='show'>
+    <div *ngFor='let item of items'>{{ item }}</div>
+    <div *ngIf='show || false'>
+        <b>Condition</b>
+    </div>
     <span>
         <b>Title: </b>{{title}}, 
         <b>service name:</b> {{ userService.name }}, 

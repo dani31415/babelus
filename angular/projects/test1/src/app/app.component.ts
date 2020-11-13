@@ -10,6 +10,9 @@ import { UserService } from './user.service';
 export class AppComponent implements OnInit {
   constructor(public userService : UserService) 
   {
+    this.show = true;
+    //let m = [];
+    //m.map ( (a,b) => { return 'hi!' } );
   }
 
   ngOnInit() {
@@ -26,6 +29,8 @@ export class AppComponent implements OnInit {
   };
   // Declaration of title
   title = 'test1';
+  show: boolean;
+  items: ['1','2'];
 
 }
 
