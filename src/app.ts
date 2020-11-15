@@ -121,6 +121,9 @@ export class App {
         console.log("Assets...");
         for (let asset of program.assets) {
             let src = path.join('redist',asset) + '.ts';
+            if (fs.existsSync(src + 'x')) {
+                src += 'x';
+            }
             fs.copyFileSync(src,path.join(program.outDir,path.basename(src)));
             console.log('Copy file:',asset+"...");
         }
