@@ -43,6 +43,7 @@ export class SrcFile {
                 sourceFile: sourceFile,
                 factory: context.factory,
                 transformationContext: context,
+                ancestors: [],
                 visit: node => {
                     for (let feature of features) {
                         if (node!==null) {
@@ -70,6 +71,7 @@ export class SrcFile {
                 sourceFile: sourceFile,
                 factory: context.factory,
                 transformationContext: context,
+                ancestors: [],
                 visit: node => {
                     for (let i=features.length-1;i>=0;i--) { // reverse iterate
                         let feature = features[i];

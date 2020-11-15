@@ -19,18 +19,38 @@ function relativeToCurrentFile(context: pr.Context, program: pr.Program, moduleN
     }
 }
 
-function findRuleMatch(program:pr.Program, node:ts.JsxOpeningElement) {
-    let text = helper.getText(node.tagName);
-    for (let rule of program.tagRules) {
-        if (rule.selector == text) {
-            return rule;
+function matchSelector(selector:string, node:ts.Node) {
+    if (ts.isJsxElement(node)) {
+        let openingElement = node.openingElement;
+        if (ts.isIdentifier(openingElement.tagName)) {
+            let text = helper.getText(openingElement.tagName);
+            if (text==selector) return true;
+            for (let attribute of openingElement.attributes.properties) {
+                if (ts.isJsxAttribute(attribute)) {
+                    let matchSelector = '[' + attribute.name.text + ']'
+                    if (matchSelector == selector) return true;
+                }
+            }
         }
-        for (let attribute of node.attributes.properties) {
-            if (ts.isJsxAttribute(attribute)) {
-                let matchSelector = '[' + attribute.name.text + ']'
-                if (matchSelector  == rule.selector) {
+    }
+    if (ts.isJsxAttribute(node)) {
+        let matchSelector = '@' + node.name.text;
+        if (matchSelector == selector) return true;
+    }
+    return false;
+}
+
+function findRuleMatch(context:pr.Context, program:pr.Program, node:ts.Node) : pr.TagRule {
+    for (let rule of program.tagRules) {
+        if (matchSelector(rule.selector, node)) {
+            if (rule.parentSelector) {
+                let parent = context.ancestors[context.ancestors.length-3]; // [..., element, openingElement, attributes]
+                if (matchSelector(rule.parentSelector,parent)) {
                     return rule;
                 }
+                // continue search
+            } else {
+                return rule;
             }
         }
     }
@@ -66,36 +86,42 @@ export class TagsFeature implements Feature {
 
     declarations(node : ts.Node, context: pr.Context, program: pr.Program) : ts.Node {
         // Rename tags of elements
+        if (ts.isJsxAttribute(node)) {
+            let foundRule : pr.TagRule;
+            foundRule = findRuleMatch(context, program, node);
+            if (foundRule)  {
+                let newName = context.factory.createIdentifier(foundRule.translate);
+                return context.factory.updateJsxAttribute(node, newName, node.initializer);
+            }
+        }
         if (ts.isJsxElement(node)) {
-            let openingElement = node.openingElement;
-            if (ts.isIdentifier(openingElement.tagName)) {
-                let foundRule : pr.TagRule;
-                foundRule = findRuleMatch(program, openingElement);
-                if (foundRule) {
-                    let newTagName = context.factory.createIdentifier(foundRule.translate);
-                    if (foundRule.importsTop) {
-                        // Maybe add new imports
-                        let moduleName = relativeToCurrentFile(context, program, foundRule.importsTop);
-                        let importTop : [file:string,symbol:string] = [moduleName,foundRule.translate];
-                        let found = false;
-                        for (let it of context.sourceFile.importsTop) {
-                            if (importTop[0] == it[0] && importTop[1]==it[1]) {
-                                found = true;
-                            }
-                        }
-                        if (!found) {
-                            context.sourceFile.importsTop.push(importTop);
+            let foundRule : pr.TagRule;
+            foundRule = findRuleMatch(context, program, node);
+            if (foundRule) {
+                let newTagName = context.factory.createIdentifier(foundRule.translate);
+                if (foundRule.importsTop) {
+                    // Maybe add new imports
+                    let moduleName = relativeToCurrentFile(context, program, foundRule.importsTop);
+                    let importTop : [file:string,symbol:string] = [moduleName,foundRule.translate];
+                    let found = false;
+                    for (let it of context.sourceFile.importsTop) {
+                        if (importTop[0] == it[0] && importTop[1]==it[1]) {
+                            found = true;
                         }
                     }
-                    if (foundRule.imports) {
-                        // Maybe add new imports
-                        let moduleName = relativeToCurrentFile(context, program, foundRule.imports);
-                        context.sourceFile.imports.add( moduleName, foundRule.translate );
+                    if (!found) {
+                        context.sourceFile.importsTop.push(importTop);
                     }
-                    let newOpeningElement = context.factory.updateJsxOpeningElement(openingElement,newTagName,undefined,openingElement.attributes);
-                    let newCloseningElement = context.factory.updateJsxClosingElement(node.closingElement, newTagName);
-                    return context.factory.updateJsxElement(node, newOpeningElement, node.children, newCloseningElement);
                 }
+                if (foundRule.imports) {
+                    // Maybe add new imports
+                    let moduleName = relativeToCurrentFile(context, program, foundRule.imports);
+                    context.sourceFile.imports.add( moduleName, foundRule.translate );
+                }
+                let openingElement = node.openingElement;
+                let newOpeningElement = context.factory.updateJsxOpeningElement(openingElement,newTagName,undefined,openingElement.attributes);
+                let newCloseningElement = context.factory.updateJsxClosingElement(node.closingElement, newTagName);
+                return context.factory.updateJsxElement(node, newOpeningElement, node.children, newCloseningElement);
             }
         }
         // Identifier rename

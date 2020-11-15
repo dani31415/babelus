@@ -5,6 +5,7 @@ import { MapArray } from './lib/maparray';
 
 export class TagRule {
     public selector: string;
+    public parentSelector?: string;
     public translate: string;
     public importsTop?: string;
     public imports?: string;
@@ -117,5 +118,6 @@ export class Context {
     sourceFile : SourceFile;
     factory: ts.NodeFactory;
     transformationContext: ts.TransformationContext;
+    ancestors: ts.Node[];
     visit: ts.Visitor;
 }

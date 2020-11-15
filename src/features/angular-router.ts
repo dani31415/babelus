@@ -15,6 +15,11 @@ let rules = [
         selector:'[mat-tab-link]',
         translate:'RouterLink',
         importsTop:'./router'
+    },
+    {
+        selector:'@router-link',
+        translate:'routerLink',
+        parentSelector:'a'
     }
 ];
 

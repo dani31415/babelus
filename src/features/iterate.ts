@@ -14,6 +14,9 @@ export class IterateFeature {
             let className = helper.getText(node.name);
             context.currentClass = program.findClassByName(className);
         }
-        return ts.visitEachChild(node, context.visit, context.transformationContext);
+        context.ancestors.push(node);
+        let newNode = ts.visitEachChild(node, context.visit, context.transformationContext);
+        context.ancestors.pop();
+        return newNode;
     }
 }
