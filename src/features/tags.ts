@@ -19,6 +19,23 @@ function relativeToCurrentFile(context: pr.Context, program: pr.Program, moduleN
     }
 }
 
+function findRuleMatch(program:pr.Program, node:ts.JsxOpeningElement) {
+    let text = helper.getText(node.tagName);
+    for (let rule of program.tagRules) {
+        if (rule.selector == text) {
+            return rule;
+        }
+        for (let attribute of node.attributes.properties) {
+            if (ts.isJsxAttribute(attribute)) {
+                let matchSelector = '[' + attribute.name.text + ']'
+                if (matchSelector  == rule.selector) {
+                    return rule;
+                }
+            }
+        }
+    }
+}
+
 export class TagsFeature implements Feature {
     constructor() {
     }
@@ -48,44 +65,36 @@ export class TagsFeature implements Feature {
     }
 
     declarations(node : ts.Node, context: pr.Context, program: pr.Program) : ts.Node {
-        // Rename open tags
-        if (ts.isJsxOpeningElement(node)) {
-            if (ts.isIdentifier(node.tagName)) {
-                let text = helper.getText(node.tagName);
-                for (let rule of program.tagRules) {
-                    if (rule.selector == text) {
-                        let newTagName = context.factory.createIdentifier(rule.translate);
-                        if (rule.importsTop) {
-                            let moduleName = relativeToCurrentFile(context, program, rule.importsTop);
-                            let importTop : [file:string,symbol:string] = [moduleName,rule.translate];
-                            let found = false;
-                            for (let it of context.sourceFile.importsTop) {
-                                if (importTop[0] == it[0] && importTop[1]==it[1]) {
-                                    found = true;
-                                }
-                            }
-                            if (!found) {
-                                context.sourceFile.importsTop.push(importTop);
+        // Rename tags of elements
+        if (ts.isJsxElement(node)) {
+            let openingElement = node.openingElement;
+            if (ts.isIdentifier(openingElement.tagName)) {
+                let foundRule : pr.TagRule;
+                foundRule = findRuleMatch(program, openingElement);
+                if (foundRule) {
+                    let newTagName = context.factory.createIdentifier(foundRule.translate);
+                    if (foundRule.importsTop) {
+                        // Maybe add new imports
+                        let moduleName = relativeToCurrentFile(context, program, foundRule.importsTop);
+                        let importTop : [file:string,symbol:string] = [moduleName,foundRule.translate];
+                        let found = false;
+                        for (let it of context.sourceFile.importsTop) {
+                            if (importTop[0] == it[0] && importTop[1]==it[1]) {
+                                found = true;
                             }
                         }
-                        if (rule.imports) {
-                            let moduleName = relativeToCurrentFile(context, program, rule.imports);
-                            context.sourceFile.imports.add( moduleName, rule.translate );
+                        if (!found) {
+                            context.sourceFile.importsTop.push(importTop);
                         }
-                        return context.factory.updateJsxOpeningElement(node,newTagName,undefined,node.attributes);
                     }
-                }
-            }
-        }
-        // Rename close tags
-        if (ts.isJsxClosingElement(node)) {
-            if (ts.isIdentifier(node.tagName)) {
-                let text = helper.getText(node.tagName);
-                for (let rule of program.tagRules) {
-                    if (rule.selector == text) {
-                        let newTagName = context.factory.createIdentifier(rule.translate);
-                        return context.factory.updateJsxClosingElement(node,newTagName);
+                    if (foundRule.imports) {
+                        // Maybe add new imports
+                        let moduleName = relativeToCurrentFile(context, program, foundRule.imports);
+                        context.sourceFile.imports.add( moduleName, foundRule.translate );
                     }
+                    let newOpeningElement = context.factory.updateJsxOpeningElement(openingElement,newTagName,undefined,openingElement.attributes);
+                    let newCloseningElement = context.factory.updateJsxClosingElement(node.closingElement, newTagName);
+                    return context.factory.updateJsxElement(node, newOpeningElement, node.children, newCloseningElement);
                 }
             }
         }

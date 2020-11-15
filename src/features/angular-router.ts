@@ -10,6 +10,11 @@ let rules = [
         selector:'router-outlet',
         translate:'RouterOutlet',
         imports: './router'
+    },
+    {
+        selector:'[mat-tab-link]',
+        translate:'RouterLink',
+        importsTop:'./router'
     }
 ];
 

@@ -27,14 +27,18 @@ npm start
   - simple property access
   - recursive property access
 - Property binding
+- Conditionals & loops
 
 # TODO
 - Lazy modules component dependency
-- Conditionals & loops
 - Templates with basic HTML (attributes with interpolation)
 - Routing
 - Reactivity 😥
 - ...
+
+# Angular requirements
+
+- Absence of inline styling
 
 # Caveats
 - Added "strictPropertyInitialization": false to react tsconfig.json

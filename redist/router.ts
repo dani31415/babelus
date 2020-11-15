@@ -31,3 +31,13 @@ export class ActivatedRoute {
 
 export let router = new Router();
 export let activatedRoute = new ActivatedRoute();
+
+export class RouterLinkProps {
+    active?:boolean;
+}
+
+export default class RouterLink extends React.Component<RouterLinkProps> {
+    constructor(props) {
+        super(props);
+    }
+}
