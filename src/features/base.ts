@@ -35,6 +35,7 @@ function containsImport(node:ts.SourceFile, symbol:string, file:string) : boolea
     return false;
 }
 
+// import {...symbols} from file
 function createImport(factory:ts.NodeFactory, node:ts.SourceFile, symbols:string[], file:string) : ts.ImportDeclaration {
     let importSpecifiers = [];
     for (let symbol of symbols) {
@@ -68,12 +69,27 @@ function containsImportTop(node:ts.SourceFile, symbol:string, file:string) : boo
     return false;
 }
 
+// import symbol from file
 function createImportTop(factory:ts.NodeFactory, node:ts.SourceFile, symbol:string, file:string) : ts.ImportDeclaration {
     if (containsImportTop(node,symbol,file)) {
         return null;
     }
     let namedImports = factory.createIdentifier(symbol);
     let importClause = factory.createImportClause(false,namedImports,undefined);
+    let stringLiteral = factory.createStringLiteral(file);
+    let importDeclaration = factory.createImportDeclaration(undefined, undefined, importClause, stringLiteral);
+    return importDeclaration;
+}
+
+// import * as symbol from file
+function createImportAll(factory:ts.NodeFactory, node:ts.SourceFile, symbol:string, file:string) : ts.ImportDeclaration {
+    if (containsImportTop(node,symbol,file)) {
+        return null;
+    }
+    
+    let symbolident = factory.createIdentifier(symbol);
+    let namedImports = factory.createNamespaceImport(symbolident);
+    let importClause = factory.createImportClause(false,undefined,namedImports);
     let stringLiteral = factory.createStringLiteral(file);
     let importDeclaration = factory.createImportDeclaration(undefined, undefined, importClause, stringLiteral);
     return importDeclaration;
@@ -140,6 +156,19 @@ export class BaseFeature {
         // Add imports
         if (ts.isSourceFile(node)) {
             let newImports = [];
+            context.sourceFile.importsAll.forEach( value => {
+                let srcDir = path.dirname(node.fileName);
+                let outFileName = value[0];
+                if (outFileName.startsWith('/')) {
+                    outFileName = path.relative(srcDir,outFileName);
+                    let ext = path.extname(outFileName);
+                    outFileName = './' + outFileName.substr(0,outFileName.length-ext.length);
+                }
+                let statement = createImportAll(context.factory,node,value[1],outFileName);
+                if (statement) { // null if imports are already satisfied
+                    newImports.push(statement);
+                }
+            });
             context.sourceFile.importsTop.forEach( value => {
                 let srcDir = path.dirname(node.fileName);
                 let outFileName = value[0];

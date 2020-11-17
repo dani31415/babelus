@@ -76,11 +76,11 @@ export class DependencyInjectionFeature implements Feature {
         // Remove decorator
         if (ts.isDecorator(node)) {
             if (node.parent.kind == ts.SyntaxKind.ClassDeclaration) {
-                context.currentClass.isInjectable = true;
                 if (ts.isCallExpression(node.expression))  {
                     let identifier = node.expression.expression;
                     if (ts.isIdentifier(identifier)) {
                         if (identifier.text == 'Injectable') {
+                            context.currentClass.isInjectable = true;
                             return null; // remove decorator
                         }
                     }

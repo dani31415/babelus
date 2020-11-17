@@ -52,7 +52,17 @@ export class InputFeature implements Feature {
         }
         // Add propety classes
         if (ts.isSourceFile(node)) {
-            let propsClasses = [];
+            let newStatements = [];
+            let i = 0;
+            // Add import statements
+            while (i<node.statements.length) {
+                if (ts.isImportDeclaration(node.statements[i])) {
+                    newStatements.push(node.statements[i]);
+                    i++;
+                } else {
+                    break;
+                }
+            }
             for (let clazz of context.sourceFile.classes) {
                 if (clazz.isComponent) {
                     if (clazz.inputs.length>0) {
@@ -66,16 +76,18 @@ export class InputFeature implements Feature {
                             null,null,clazz.name + 'Props',null,null,declarations
                         );
                         let visited = context.visit(propClass);
-                        propsClasses.push(visited);
+                        newStatements.push(visited);
                     }
                 }
             }
-
-            let statements = [...propsClasses, ...node.statements];
-
+            // Add remaining statements
+            while (i<node.statements.length) {
+                newStatements.push(node.statements[i]);
+                i++;
+            }
             return context.factory.updateSourceFile(
                 node,
-                statements,
+                newStatements,
                 node.isDeclarationFile,
                 node.referencedFiles,
                 node.typeReferenceDirectives,

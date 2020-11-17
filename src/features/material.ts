@@ -66,7 +66,7 @@ export class MaterialFeature implements Feature {
     }
     analysis(node : ts.Node, context: pr.Context, program: pr.Program) : ts.Node {
         // A way to initialize
-        if (ts.isSourceFile) {
+        if (ts.isSourceFile(node)) {
             program.ignoreModules = program.ignoreModules.concat(ignoreModules);
             program.moduleReplace = program.moduleReplace.concat(moduleReplace);
             program.tagRules = program.tagRules.concat(rules);

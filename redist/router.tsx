@@ -2,8 +2,20 @@ import { Observable } from 'rxjs';
 import React from 'react';
 import { NavLink } from 'react-router-dom';
 
-export class RouterOutlet extends React.Component {
+export type Routes =  {
+    path:string,
+    component?:Function,
+    loadChildren?:Routes
+}[];
 
+class RouterOutletProps {
+    routes: Routes
+}
+
+export class RouterOutlet extends React.Component<RouterOutletProps> {
+    constructor(props) {
+        super(props);
+    }
 }
 
 export class Router {
@@ -45,4 +57,8 @@ export default class RouterLink extends React.Component<RouterLinkProps> {
     render() {
         return <NavLink to={this.props.routerLink} activeClassName='selected'>{this.props.children}</NavLink>;
     }
+}
+
+export class RouterModule {
+
 }

@@ -13,6 +13,7 @@ import { TagsFeature } from './features/tags';
 import { AngularRouterFeature } from './features/angular-router';
 import { NgxIndexedDbFeature } from './features/ngx-indexed-db';
 import { CkEditorFeature } from './features/ckeditor';
+import { NgModuleFeature } from './features/ng-module';
 
 export let AppBuilder = {
     app: function() {
@@ -26,6 +27,7 @@ export let AppBuilder = {
             new CkEditorFeature(),
             new CleanInterfaceFeature(),
             new ComponentFeature(html),
+            new NgModuleFeature(),
             new InputFeature(),
             new DependencyInjectionFeature(),
             new IterateFeature()

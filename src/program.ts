@@ -93,12 +93,18 @@ export class InjectField {
     name: string;
 }
 
+export class NgModuleImport {
+    name: string;
+    original: ts.Expression;
+}
+
 export class SourceFile {
     public sourceFile: ts.SourceFile;
     public needsEmit: boolean;
     public classes : ClassDeclaration[] = [];
     public imports = new MapArray<string,string>();
     public importsTop : [file:string,symbol:string][] = [];
+    public importsAll : [file:string,symbol:string][] = [];
     public fileDependencies : string[] = [];
 }
 
@@ -106,10 +112,15 @@ export class ClassDeclaration {
     name: string;
     isComponent: boolean;
     isInjectable: boolean;
+    isNgModule: boolean;
+    // Component data
     selector?: string;
     templateUrl?: string;
     inputs: InputDeclaration[] = [];
     injectedFields: InjectField[] = [];
+    // Module data
+    ngModuleImports: NgModuleImport[] = [];
+    ngModuleDeclarations: string[] = [];
 }
 
 export class Context {
