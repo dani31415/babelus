@@ -46,6 +46,7 @@ export class DependencyInjectionFeature implements Feature {
                         context.currentClass.injectedFields.push ( { 
                             name: varName
                         });
+                        // Resolve symbol
                         let module = findImport(context.sourceFile.sourceFile, className);
                         if (module!=null && ts.isStringLiteral(module)) {
                             context.sourceFile.imports.add( module.text, varName );

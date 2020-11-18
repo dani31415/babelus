@@ -15,7 +15,7 @@ class NgModuleResult {
     public declarations: string[] = [];
 }
 
-function findModule(node:ts.ClassDeclaration, context:pr.Context) {
+function findModule(node:ts.ClassDeclaration, context:pr.Context, program:pr.Program) {
     if (node.decorators) {
         for (let decorator of node.decorators) {
             if (ts.isCallExpression(decorator.expression)) {
@@ -36,6 +36,7 @@ function findModule(node:ts.ClassDeclaration, context:pr.Context) {
                                                         if (ts.isIdentifier(element)) {
                                                             result.imports.push({
                                                                 name:element.text,
+                                                                provides:helper.getProvidesFromModule(program,element.text),
                                                                 original:element
                                                             });
                                                         }
@@ -46,11 +47,11 @@ function findModule(node:ts.ClassDeclaration, context:pr.Context) {
                                                                     let method = element.expression.name.text;
                                                                     result.imports.push({
                                                                         name:module+'.'+method,
+                                                                        provides:helper.getProvidesFromModule(program,module+'.'+method),
                                                                         original:element
-                                                                    });                                                     
+                                                                    });                               
                                                                 }
                                                             }
-                            
                                                         }
                                                     }
                                                 }
@@ -85,9 +86,9 @@ export class NgModuleFeature implements Feature {
     constructor() {
     }
 
-    analysis(node : ts.Node, context: pr.Context, program: pr.Program) : ts.Node {
+    analysis(node : ts.Node, context: pr.Context, program: pr.Program) : ts.Node {        
         if (ts.isClassDeclaration(node)) {
-            let moduleResult : NgModuleResult = findModule(node, context);
+            let moduleResult : NgModuleResult = findModule(node, context, program);
             if (moduleResult) {
                 context.currentClass.isNgModule = true;
                 context.currentClass.ngModuleImports = moduleResult.imports;
@@ -104,34 +105,25 @@ export class NgModuleFeature implements Feature {
                 if (ts.isClassDeclaration(statement)) {
                     let currentClass = helper.findClassByName(program, statement.name.text);
                     if (currentClass && currentClass.isNgModule) {
-                        console.log(currentClass.name);
-                        // Replace module by object creation and export the symbols
-                        // 1. Find exports
-                        let exports : {module:string,method:string,arguments:ts.Expression[]}[] = [];
+                        // Export symbols provided by forRoot or forChild imports
                         for (let imp of currentClass.ngModuleImports) {
-                            if (ts.isCallExpression(imp.original)) {
-                                if (ts.isPropertyAccessExpression(imp.original.expression)) {
-                                    if (ts.isIdentifier(imp.original.expression.expression) && ts.isIdentifier(imp.original.expression.name)) {
-                                        let module = imp.original.expression.expression.text;
-                                        let method = imp.original.expression.name.text;
-                                        let args = [...imp.original.arguments];
-                                        exports.push( { module, method, arguments:args } );
-                                    }
+                            if (imp.provides) {
+                                // export { imp.imports } = inp.original;
+                                let vars = [];
+                                for (let v of imp.provides) {
+                                    let w = descapitalizeName(v);
+                                    let varName = context.factory.createIdentifier(w);
+                                    let bindingElement = context.factory.createBindingElement(undefined,undefined,varName,undefined);
+                                    vars.push(bindingElement);
                                 }
-                            }
-                        }
-                        // 2. Generate exports
-                        for (let exp of exports) {
-                            let exportToken = context.factory.createToken(ts.SyntaxKind.ExportKeyword);
-                            let varName = descapitalizeName( exp.module );
+                                let varName = context.factory.createObjectBindingPattern( vars );
 
-                            let props = context.factory.createPropertyAssignment( exp.method, exp.arguments[0] );
-                            let expr = context.factory.createObjectLiteralExpression([props]);
-                            //let newExpr = context.factory.createNewExpression( classIdent, [], [])
-                            let varDecl = context.factory.createVariableDeclaration( varName, undefined, undefined, expr);
-                            let vars = context.factory.createVariableDeclarationList( [ varDecl ] );
-                            let varStatement = context.factory.createVariableStatement( [ exportToken ], vars )
-                            newStatements.push( varStatement );
+                                let varDecl = context.factory.createVariableDeclaration( varName, undefined, undefined, imp.original);
+                                let varsDecl = context.factory.createVariableDeclarationList( [ varDecl ] );
+                                let exportToken = context.factory.createToken(ts.SyntaxKind.ExportKeyword);
+                                let varStatement = context.factory.createVariableStatement( [ exportToken ], varsDecl )
+                                newStatements.push( varStatement );
+                            }
                         }
                     } else {
                         newStatements.push( statement );

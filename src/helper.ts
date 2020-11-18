@@ -32,13 +32,18 @@ export function findClassByName(program:pr.Program, className:string) : pr.Class
     }
 }
 
-export function findImport(program:pr.Program, ngModuleClass:pr.ClassDeclaration, imp:string) : { ngModule:pr.ClassDeclaration, imp:pr.NgModuleImport } {
+export function findImport(program:pr.Program, ngModuleClass:pr.ClassDeclaration, imp:string) : pr.ClassDeclaration {
     for (let i of ngModuleClass.ngModuleImports) {
-        if (i.name == imp) {
-            return { ngModule:ngModuleClass, imp:i };
+        if (i.provides) {
+            for (let j of i.provides) {
+                if (j==imp) {
+                    return ngModuleClass;
+                }
+            }
         }
     }
     for (let i of ngModuleClass.ngModuleImports) {
+        // Iterate for imported modules
         let ngModule = findClassByName(program, i.name);
         if (ngModule!=null) {
             let res = findImport(program, ngModule, imp);
@@ -47,7 +52,7 @@ export function findImport(program:pr.Program, ngModuleClass:pr.ClassDeclaration
     }
 }
 
-export function findNgModuleByComponentAndImport(program:pr.Program, clazz:pr.ClassDeclaration, imp:string) : { ngModule:pr.ClassDeclaration, imp:pr.NgModuleImport } {
+export function findNgModuleByComponentAndImport(program:pr.Program, clazz:pr.ClassDeclaration, imp:string) : pr.ClassDeclaration {
     let ngModuleClass = findNgModuleByComponent(program, clazz);
     console.log("Module of component:",clazz.name,ngModuleClass.name)
     return findImport(program, ngModuleClass, imp);
@@ -61,3 +66,8 @@ export function findSourceFileByClassName(program:pr.Program, className:string) 
     }
 }
 
+export function getProvidesFromModule(program:pr.Program,module:string) : string[] {
+    for (let imp of program.moduleProvides) {
+        if (imp.moduleMethod==module) return imp.provides;
+    }
+}

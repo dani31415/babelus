@@ -18,6 +18,13 @@ let moduleReplace : pr.ModuleReplace[] = [
     }
 ]
 
+let moduleProvides = [
+    {
+        moduleMethod:'NgxIndexedDBModule.forRoot',
+        provides:['NgxIndexedDBService']
+    }
+];
+
 export class NgxIndexedDbFeature implements Feature {
     constructor() {
     }
@@ -27,6 +34,7 @@ export class NgxIndexedDbFeature implements Feature {
             program.ignoreModules = program.ignoreModules.concat(ignoreModules);
             program.moduleReplace = program.moduleReplace.concat(moduleReplace);
             program.tagRules = program.tagRules.concat(rules);
+            program.moduleProvides = program.moduleProvides.concat(moduleProvides);
         }
         return node;
     }

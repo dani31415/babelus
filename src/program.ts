@@ -31,6 +31,7 @@ export class Program {
     public moduleReplace : ModuleReplace[] = []
     public tagRules : TagRule[] = [];
     public assets: string[] = [];
+    public moduleProvides: { moduleMethod:string, provides:string[] }[] = [];
  
     public findClassByName(className : string) : ClassDeclaration  {
         let newName = this.classRename.get(className);
@@ -95,6 +96,7 @@ export class InjectField {
 
 export class NgModuleImport {
     name: string;
+    provides: string[];
     original: ts.Expression;
 }
 

@@ -72,5 +72,10 @@ export default class RouterLink extends React.Component<RouterLinkProps> {
 }
 
 export class RouterModule {
-
+    static forRoot(x:Routes) {
+        return {routes:x};
+    }
+    static forChild(x:Routes) {
+        return {routes:x};
+    }
 }

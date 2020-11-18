@@ -34,6 +34,17 @@ let moduleReplace : pr.ModuleReplace[] = [
     }
 ]
 
+let moduleProvides = [
+    {
+        moduleMethod: 'RouterModule.forRoot',
+        provides: [ 'Routes' ]
+    },
+    {
+        moduleMethod: 'RouterModule.forChild',
+        provides: [ 'Routes' ]
+    }
+]
+
 // For exmaple, for
 //   () => import('./task/task.module').then(m => m.TaskModule)
 // returns 
@@ -69,6 +80,7 @@ export class AngularRouterFeature implements Feature {
             program.ignoreModules = program.ignoreModules.concat(ignoreModules);
             program.moduleReplace = program.moduleReplace.concat(moduleReplace);
             program.tagRules = program.tagRules.concat(rules);
+            program.moduleProvides = program.moduleProvides.concat(moduleProvides);
         }
         if (ts.isArrowFunction(node)) {
             let result = findModuleLazyImport(context, node);
@@ -77,13 +89,12 @@ export class AngularRouterFeature implements Feature {
                 let {module,fileModule} = result;
                 let ngModuleClass = helper.findClassByName(program, module.text);
                 if (ngModuleClass) {
-                    let res = helper.findImport(program, ngModuleClass, 'RouterModule.forChild');
-                    if (res) {
-                        let { ngModule, imp } = res;
+                    let ngModule = helper.findImport(program, ngModuleClass, 'Routes');
+                    if (ngModule) {
                         let sourceFile = helper.findSourceFileByClassName(program, ngModule.name);
                         context.sourceFile.importsAll.push([sourceFile.sourceFile.fileName,ngModule.name]);
                         sourceFile.needsEmit = true;
-                        return context.factory.createIdentifier(ngModule.name + '.routerModule.forChild');
+                        return context.factory.createIdentifier(ngModule.name + '.routes');
                     }
                 }
             }
@@ -97,13 +108,13 @@ export class AngularRouterFeature implements Feature {
             if (ts.isIdentifier(node.tagName)) {
                 // Import the declaration of the routes
                 if (node.tagName.text=='router-outlet') {
-                    let { ngModule, imp } = helper.findNgModuleByComponentAndImport(program, context.currentClass, 'RouterModule.forRoot');
-                    console.log("Found module for import:",ngModule.name,imp);
+                    let ngModule = helper.findNgModuleByComponentAndImport(program, context.currentClass, 'Routes');
+                    console.log("Found module for import:",ngModule.name);
                     let sourceFile = helper.findSourceFileByClassName(program, ngModule.name);
-                    context.sourceFile.imports.add(sourceFile.sourceFile.fileName,'routerModule');
+                    context.sourceFile.imports.add(sourceFile.sourceFile.fileName,'routes');
                     sourceFile.needsEmit = true;
                     let routes = context.factory.createIdentifier('routes');
-                    let routeModule = context.factory.createIdentifier('routerModule.forRoot');
+                    let routeModule = context.factory.createIdentifier('routes');
                     let routeModuleExpr = context.factory.createJsxExpression(undefined, routeModule);
                     let attribute = context.factory.createJsxAttribute(routes,routeModuleExpr);
                     let attributes = context.factory.createJsxAttributes([attribute]); // ,...node.attributes.properties]);
