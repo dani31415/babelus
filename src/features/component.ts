@@ -106,6 +106,25 @@ function findTemplate(clazz: ts.ClassDeclaration, context: pr.Context) : Templat
     return null;
 }
 
+function findAsyncInit(node:ts.ClassDeclaration) {
+    if (!node.members) return;
+    for (let member of node.members) {
+        if (ts.isMethodDeclaration(member)) {
+            if (ts.isIdentifier(member.name)) {
+                if (member.name.text=='ngOnInit' && member.modifiers) { // ngOnInit found
+                    // Is async?
+                    for (let modifier of member.modifiers) {
+                        if (modifier.kind == ts.SyntaxKind.AsyncKeyword) {
+                            return true;
+                        }
+                    }
+                }
+            }
+        }
+    }
+    return false;
+}
+
 /**
  * Translates templates to jsx (ts.JsxChild)
  * Removes @Component decorator.
@@ -120,18 +139,25 @@ export class ComponentFeature implements Feature {
                 context.currentClass.isComponent = true;
                 context.currentClass.selector = templateResult.selector;
                 context.currentClass.templateUrl = templateResult.templateUrl;
+
+                // Add render method
                 let templateExpr : ts.Expression; // hp.ParseTreeResult;
                 templateExpr = this.html.translateTemplate(context.factory, templateResult.templateUrl);
                 let newMember = render(context.factory, templateExpr);
                 let newMembers = context.factory.createNodeArray<ts.ClassElement>([...node.members, newMember]);
+
+                // Check async init
+                context.currentClass.hasAsyncInit = findAsyncInit(node);
+
+                // Rename class
                 let newClassName = capitalizeSelector( templateResult.selector );
                 let newClassNameNode = context.factory.createIdentifier( newClassName );
                 let className = node.name.getText();
-                // Rename
                 context.currentClass.name = newClassName;
                 program.classRename.set(className, newClassName);
                 program.requireClasses.push(newClassName);
 
+                // Add extends React.Component
                 context.sourceFile.importsTop.push(['react','React']);
                 let react = context.factory.createIdentifier('React');
                 let component = context.factory.createIdentifier('Component');
@@ -181,6 +207,28 @@ export class ComponentFeature implements Feature {
                 return context.factory.updateJsxAttribute(node,className,node.initializer);
             }
 
+        }
+
+        if (ts.isConstructorDeclaration(node)) {
+            // Add async initialization
+            if (context.currentClass.hasAsyncInit) {
+                // this.ngOnInit().then ( _ => this.setState({}));
+                let thisToken = context.factory.createToken(ts.SyntaxKind.ThisKeyword);
+                let thisNgOnInit = context.factory.createPropertyAccessExpression(thisToken,'ngOnInit');
+                let thisNgOnInitApply = context.factory.createCallExpression(thisNgOnInit,undefined,[]);
+                let then = context.factory.createPropertyAccessExpression(thisNgOnInitApply, 'then');
+                let thisSetState = context.factory.createPropertyAccessExpression(thisToken,'setState');
+                //let nullToken = context.factory.createToken(ts.SyntaxKind.NullKeyword);
+                let emptyObject = context.factory.createObjectLiteralExpression([]);
+                let thisSetStateApply = context.factory.createCallExpression(thisSetState,undefined,[emptyObject]);
+                let egtt = context.factory.createToken(ts.SyntaxKind.EqualsGreaterThanToken);
+                let map = context.factory.createArrowFunction(undefined,[],undefined,undefined,egtt,thisSetStateApply);
+                let update = context.factory.createCallExpression(then, undefined, [map]);
+                let updateStatement = context.factory.createExpressionStatement(update);
+                let newStatements : ts.Statement[] = [...node.body.statements,updateStatement];
+                let newBody = context.factory.updateBlock(node.body,newStatements);
+                return context.factory.updateConstructorDeclaration(node,node.decorators,node.modifiers,node.parameters,newBody);
+            }
         }
         return node;
     }

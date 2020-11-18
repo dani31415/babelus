@@ -118,6 +118,7 @@ export class ClassDeclaration {
     templateUrl?: string;
     inputs: InputDeclaration[] = [];
     injectedFields: InjectField[] = [];
+    hasAsyncInit?: boolean;
     // Module data
     ngModuleImports: NgModuleImport[] = [];
     ngModuleDeclarations: string[] = [];
