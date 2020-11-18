@@ -2,6 +2,7 @@
     "compilerOptions": {
         "esModuleInterop": true,
         "strict": false,
-        "strictPropertyInitialization": false
+        "strictPropertyInitialization": false,
+        "jsx": "preserve"
     }
 }
