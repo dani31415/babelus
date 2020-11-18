@@ -385,7 +385,9 @@ export class Html {
                                 }
                                 let func = factory.createArrowFunction(undefined,undefined,vars,undefined,
                                   factory.createToken(ts.SyntaxKind.EqualsGreaterThanToken), body);
-                                expression = factory.createCallExpression( map, null, [ func ] );
+                                let callExpression = factory.createCallExpression( map, null, [ func ] );
+                                // list && list.map(...)
+                                expression = factory.createBinaryExpression(list, ts.SyntaxKind.AmpersandAmpersandToken, callExpression);
                             }
                             // list.map ( variables => {} )
                         } else {
