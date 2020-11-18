@@ -10,35 +10,6 @@ export type SingleRoute =  {
 
 export type Routes =  SingleRoute[];
 
-class Switch2 extends React.Component {
-    render() {
-        return <React.Fragment>
-            &lt;switch&gt;
-            {this.props.children}
-            &lt;/switch&gt;
-        </React.Fragment>
-    }
-}
-
-class Route2Props {
-    path:string;
-}
-
-class Route2 extends React.Component<Route2Props> {
-    constructor(props) {
-        super(props);
-    }
-    render() {
-        return <React.Fragment>
-            &lt;route path={this.props.path}&gt;
-            <br/>
-            {this.props.children}
-            <br/>
-            &lt;/route&gt;
-        </React.Fragment>
-    }
-}
-
 class RouterOutletProps {
     routes: Routes
 }
