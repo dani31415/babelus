@@ -47,7 +47,7 @@ function findModule(node:ts.ClassDeclaration, context:pr.Context, program:pr.Pro
                                                                     let method = element.expression.name.text;
                                                                     result.imports.push({
                                                                         name:module+'.'+method,
-                                                                        provides:helper.getProvidesFromModule(program,module+'.'+method),
+                                                                        provides:helper.getProvidesFromModuleMethod(program,module+'.'+method),
                                                                         original:element
                                                                     });                               
                                                                 }

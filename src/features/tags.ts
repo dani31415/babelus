@@ -1,23 +1,9 @@
 import * as ts from 'typescript';
-import path from 'path';
 
 import * as pr from '../program';
 import { Feature } from "./feature";
 import * as helper from "../helper";
 import { MapArray } from '../lib/maparray';
-
-function relativeToCurrentFile(context: pr.Context, program: pr.Program, moduleName:string) : string {
-    if (moduleName.charAt(0)=='.') {
-        let moduleName0 = path.join(program.srcDir, moduleName);
-        let moduleName1 = path.relative(path.dirname(context.fileName),moduleName0);
-        if (!program.assets.includes(moduleName)) {
-            program.assets.push(moduleName);
-        }
-        return moduleName1;
-    } else {
-        return moduleName;
-    }
-}
 
 function matchSelector(selector:string, node:ts.Node) {
     if (ts.isJsxElement(node)) {
@@ -66,7 +52,7 @@ export class TagsFeature implements Feature {
                 let moduleName = node.moduleSpecifier.text;
                 for (let module of program.moduleReplace) {
                     if (module.pattern == moduleName) {
-                        let moduleName = relativeToCurrentFile(context, program, module.name);
+                        let moduleName = helper.relativeToCurrentFile(context, program, module.name);
                         let newModule = context.factory.createStringLiteral(moduleName);
                         for (let symbolRename of module.symbolRename) {
                             program.classRename.set(symbolRename[0], symbolRename[1]);
@@ -101,7 +87,7 @@ export class TagsFeature implements Feature {
                 let newTagName = context.factory.createIdentifier(foundRule.translate);
                 if (foundRule.importsTop) {
                     // Maybe add new imports
-                    let moduleName = relativeToCurrentFile(context, program, foundRule.importsTop);
+                    let moduleName = helper.relativeToCurrentFile(context, program, foundRule.importsTop);
                     let importTop : [file:string,symbol:string] = [moduleName,foundRule.translate];
                     let found = false;
                     for (let it of context.sourceFile.importsTop) {
@@ -115,7 +101,7 @@ export class TagsFeature implements Feature {
                 }
                 if (foundRule.imports) {
                     // Maybe add new imports
-                    let moduleName = relativeToCurrentFile(context, program, foundRule.imports);
+                    let moduleName = helper.relativeToCurrentFile(context, program, foundRule.imports);
                     context.sourceFile.imports.add( moduleName, foundRule.translate );
                 }
                 let openingElement = node.openingElement;

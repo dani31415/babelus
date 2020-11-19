@@ -120,7 +120,19 @@ export class App {
 
         console.log("Assets...");
         for (let asset of program.assets) {
-            let src = path.join('redist',asset) + '.ts';
+            let base = path.join('redist',asset);
+            if (fs.existsSync(base)) {
+                let files = fs.readdirSync(base);
+                fs.mkdirSync(path.join(program.outDir,asset),{recursive:true});
+                if (files) for (let file of files) {
+                    console.log(file);
+                    fs.copyFileSync(
+                        path.join(base,file),
+                        path.join(program.outDir,asset,file)
+                    );
+                }
+            }
+            let src = base + '.ts';
             if (fs.existsSync(src + 'x')) {
                 src += 'x';
             }

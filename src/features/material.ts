@@ -61,6 +61,13 @@ let moduleReplace : pr.ModuleReplace[] = [
     }
 ]
 
+let moduleProvides = [
+    {
+        module: './material',
+        provides: [ 'MatDialog', 'MatDialogRef' ]
+    }
+]
+
 export class MaterialFeature implements Feature {
     constructor() {
     }
@@ -70,6 +77,7 @@ export class MaterialFeature implements Feature {
             program.ignoreModules = program.ignoreModules.concat(ignoreModules);
             program.moduleReplace = program.moduleReplace.concat(moduleReplace);
             program.tagRules = program.tagRules.concat(rules);
+            program.moduleProvides = program.moduleProvides.concat(moduleProvides);
         }
         return node;
     }

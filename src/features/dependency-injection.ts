@@ -36,6 +36,7 @@ export class DependencyInjectionFeature implements Feature {
         // Upddate constructor, store injected parameters and mark class as required
         if (ts.isConstructorDeclaration(node)) {
             if (context.currentClass.isComponent || context.currentClass.isInjectable) {
+                // Get list of injected variables and types from constructor
                 for (let parameter of node.parameters) {
                     if (ts.isIdentifier(parameter.name) && 
                     ts.isTypeReferenceNode(parameter.type) &&
@@ -44,13 +45,9 @@ export class DependencyInjectionFeature implements Feature {
                         program.requireClasses.push( className );
                         let varName = helper.getText( parameter.name );
                         context.currentClass.injectedFields.push ( { 
-                            name: varName
+                            name: varName,
+                            className: className
                         });
-                        // Resolve symbol
-                        let module = findImport(context.sourceFile.sourceFile, className);
-                        if (module!=null && ts.isStringLiteral(module)) {
-                            context.sourceFile.imports.add( module.text, varName );
-                        }
                     }
                 }
                 let block;
@@ -92,6 +89,35 @@ export class DependencyInjectionFeature implements Feature {
     }
 
     declarations(node:ts.Node, context:pr.Context, program:pr.Program) : ts.Node {
+        // Import symbols 
+        if (ts.isConstructorDeclaration(node)) {
+            if (context.currentClass.isComponent || context.currentClass.isInjectable) {
+                let imps = [];
+                // Find the providers
+                context.currentClass.createSingleton = true;
+                for (let injectField of context.currentClass.injectedFields) {
+                    if (imps) {
+                        let fileName = helper.findFileNameByProvides(program, injectField.className);
+                        if (fileName) {
+                            imps.push([fileName,injectField.name,injectField.className]);
+                        } else {
+                            // Only if we have providers for all fields we can generate a singleton
+                            context.currentClass.createSingleton = false;
+                        }
+                    }
+                }
+                for (let imp of imps) {
+                    let moduleName = helper.relativeToCurrentFile(context, program, imp[0]);
+                    let symbol;
+                    if (descapitalizeName(imp[2])==imp[1]) {
+                        symbol = imp[1];
+                    } else {
+                        symbol = descapitalizeName(imp[2])+' as '+imp[1];
+                    }
+                    context.sourceFile.imports.add( moduleName, symbol );
+                }
+            }
+        }
         // Remove this from injected object access
         if (ts.isPropertyAccessExpression(node)) {
             if (context.currentClass && context.currentClass.injectedFields.length>0) {
@@ -109,7 +135,7 @@ export class DependencyInjectionFeature implements Feature {
         if (ts.isSourceFile(node)) {
             let objectCreations = [];
             for (let clazz of context.sourceFile.classes) {
-                if (clazz.isInjectable) {
+                if (clazz.isInjectable && clazz.createSingleton) {
                     let exportToken = context.factory.createToken(ts.SyntaxKind.ExportKeyword);
                     let varName = descapitalizeName( clazz.name );
                     //let varIdent = context.factory.createIdentifier( varName );

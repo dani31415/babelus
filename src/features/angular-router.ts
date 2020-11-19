@@ -42,6 +42,10 @@ let moduleProvides = [
     {
         moduleMethod: 'RouterModule.forChild',
         provides: [ 'Routes' ]
+    },
+    {
+        module: './router',
+        provides: [ 'Router', 'ActivatedRoute', 'RouterModule']
     }
 ]
 
@@ -109,7 +113,6 @@ export class AngularRouterFeature implements Feature {
                 // Import the declaration of the routes
                 if (node.tagName.text=='router-outlet') {
                     let ngModule = helper.findNgModuleByComponentAndImport(program, context.currentClass, 'Routes');
-                    console.log("Found module for import:",ngModule.name);
                     let sourceFile = helper.findSourceFileByClassName(program, ngModule.name);
                     context.sourceFile.imports.add(sourceFile.sourceFile.fileName,'routes');
                     sourceFile.needsEmit = true;

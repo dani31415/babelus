@@ -18,6 +18,12 @@ export class ModuleReplace {
     public symbolRename: [from:string, to:string][];
 }
 
+export class ModuleProvides {
+    public module?: string;
+    public moduleMethod?: string;
+    public provides: string[];
+}
+
 export class Program {
     public srcDir : string;
     public outDir : string;
@@ -26,12 +32,12 @@ export class Program {
     public sourceFiles: SourceFile[];
     public requireClasses: string[] = [];
 
-    public ignoreModules = [ '@angular/core' ]; 
+    public ignoreModules = [ '@angular/core', '@angular/common' ]; 
     public ignoreInteraces = [ 'OnInit', 'OnChanges' ];
     public moduleReplace : ModuleReplace[] = []
     public tagRules : TagRule[] = [];
     public assets: string[] = [];
-    public moduleProvides: { moduleMethod:string, provides:string[] }[] = [];
+    public moduleProvides: ModuleProvides[] = [];
  
     public findClassByName(className : string) : ClassDeclaration  {
         let newName = this.classRename.get(className);
@@ -92,6 +98,7 @@ export class InputDeclaration {
 
 export class InjectField {
     name: string;
+    className: string;
 }
 
 export class NgModuleImport {
@@ -115,6 +122,8 @@ export class ClassDeclaration {
     isComponent: boolean;
     isInjectable: boolean;
     isNgModule: boolean;
+    // Injectable
+    createSingleton?: boolean;
     // Component data
     selector?: string;
     templateUrl?: string;

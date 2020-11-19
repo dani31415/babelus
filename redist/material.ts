@@ -22,5 +22,5 @@ export class MatDialogRef<T, R = any> {
     }
 }
 
-export let dialog = new MatDialog();
-export let dialogRef = new MatDialogRef();
+export let matDialog = new MatDialog();
+export let matDialogRef = new MatDialogRef();
