@@ -6,12 +6,18 @@ import * as helper from "../helper";
 import { MapArray } from '../lib/maparray';
 
 function matchSelector(selector:string, node:ts.Node) {
+    let elem : ts.JsxSelfClosingElement | ts.JsxOpeningElement
+    if (ts.isJsxSelfClosingElement(node)) {
+        elem = node;
+    }
     if (ts.isJsxElement(node)) {
-        let openingElement = node.openingElement;
-        if (ts.isIdentifier(openingElement.tagName)) {
-            let text = helper.getText(openingElement.tagName);
+        elem = node.openingElement;
+    }
+    if (elem) {
+        if (ts.isIdentifier(elem.tagName)) {
+            let text = helper.getText(elem.tagName);
             if (text==selector) return true;
-            for (let attribute of openingElement.attributes.properties) {
+            for (let attribute of elem.attributes.properties) {
                 if (ts.isJsxAttribute(attribute)) {
                     let matchSelector = '[' + attribute.name.text + ']'
                     if (matchSelector == selector) return true;
@@ -30,7 +36,11 @@ function findRuleMatch(context:pr.Context, program:pr.Program, node:ts.Node) : p
     for (let rule of program.tagRules) {
         if (matchSelector(rule.selector, node)) {
             if (rule.parentSelector) {
-                let parent = context.ancestors[context.ancestors.length-3]; // [..., element, openingElement, attributes]
+                // [..., selfClosingElement, attributes] | [..., element, openingElement, attributes] 
+                let parent = context.ancestors[context.ancestors.length-2]; 
+                if (parent.kind!=ts.SyntaxKind.JsxSelfClosingElement) {
+                    parent = context.ancestors[context.ancestors.length-3]; 
+                }
                 if (matchSelector(rule.parentSelector,parent)) {
                     return rule;
                 }
@@ -76,6 +86,7 @@ export class TagsFeature implements Feature {
             let foundRule : pr.TagRule;
             foundRule = findRuleMatch(context, program, node);
             if (foundRule)  {
+                if (foundRule.translate==null) return null; // remove attribute
                 let newName = context.factory.createIdentifier(foundRule.translate);
                 return context.factory.updateJsxAttribute(node, newName, node.initializer);
             }

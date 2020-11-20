@@ -27,6 +27,11 @@ let rules = [
         importsTop:'@material-ui/core/Card'
     },
     {
+        parentSelector:'mat-card',
+        selector:'@routerLink',
+        translate:'router-link'
+    },
+    {
         selector:'mat-hint',
         translate:'FormHelperText',
         importsTop:'@material-ui/core/FormHelperText'
@@ -35,6 +40,49 @@ let rules = [
         selector:'mat-error',
         translate:'FormHelperText',
         importsTop:'@material-ui/core/FormHelperText'
+    },
+    {
+        selector:'button',
+        translate:'Button',
+        importsTop:'@material-ui/core/Button'
+    },
+    {
+        parentSelector:'button',
+        selector:'@routerLink',
+        translate:'href'
+    },
+    {
+        parentSelector:'button',
+        selector:'@color',
+        translate:null // remove
+    },
+    {
+        parentSelector:'input',
+        selector:'@matInput',
+        translate:'mat-input'
+    },
+    {
+        parentSelector:'input',
+        selector:'@formControl',
+        translate:'form-control'
+    },
+    {
+        parentSelector:'form',
+        selector:'@formGroup',
+        translate:'form-group'
+    },
+    {
+        parentSelector:'nav',
+        selector:'@backgroundColor',
+        translate:'color'
+    },
+    {
+        selector:'@cdkDropList',
+        translate:'cdk-drop-list'
+    },
+    {
+        selector:'@cdkDrag',
+        translate:'cdk-drag'
     }
 ];
 

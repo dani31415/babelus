@@ -201,12 +201,6 @@ export class ComponentFeature implements Feature {
                 let className = context.factory.createIdentifier('contentEditable');
                 return context.factory.updateJsxAttribute(node,className,node.initializer);
             }
-            let newAttrName = normailizeAttribute(attrName);
-            if (newAttrName!=attrName) {
-                let className = context.factory.createIdentifier(newAttrName);
-                return context.factory.updateJsxAttribute(node,className,node.initializer);
-            }
-
         }
 
         if (ts.isConstructorDeclaration(node)) {
