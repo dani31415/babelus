@@ -23,7 +23,7 @@ export class FormGroup {
     constructor(controls: {
         [key: string]: AbstractControl;
     }) {
-
+        this.controls = controls;
     }
     public controls: any;
     public invalid: boolean;
