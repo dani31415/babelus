@@ -14,4 +14,7 @@ export class CkEditor extends React.Component<CkEditorProperties> {
     constructor(props: CkEditorProperties) {
         super(props);
     }
+    render() {
+        return null;
+    }
 }
