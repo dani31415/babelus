@@ -24,7 +24,7 @@ export function RouterOutlet(props:RouterOutletProps) {
     if (!url.endsWith('/')) url = url + '/';
     return  <Switch>
                 { props.routes.map( (route:SingleRoute) =>
-                    <Route path={url+route.path}>
+                    <Route path={url+route.path} key={url+route.path} >
                         { route.component ?
                             <RouterTarget component={route.component}></RouterTarget> :
                             <RouterOutlet routes={route.loadChildren}></RouterOutlet>
