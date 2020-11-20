@@ -433,11 +433,13 @@ export class Html {
         resultss = r3_ast.visitAll(visitor,nodes);
         let results : ts.JsxChild[];
         results = this.flat( resultss );
-        let result : ts.Expression;
+        let result : ts.JsxElement;
         if (results.length==1) {
-            result = results[0] as ts.JsxElement;
-            if (ts.isJsxExpression(result)) {
-                result = result.expression;
+            let result0 = results[0];
+            if (ts.isJsxElement(result0)) {
+                result = result0;
+            } else {
+                result = this.createElement(factory, 'React.Fragment', [], [], [ result0 ]);
             }
         } else {
             result = this.createElement(factory, 'React.Fragment', [], [], results);
