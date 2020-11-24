@@ -6,7 +6,8 @@ import { MapArray } from './lib/maparray';
 export class TagRule {
     public selector: string;
     public parentSelector?: string;
-    public translate: string;
+    public translate?: string;
+    public handler?: (node : ts.Node, context: Context, program: Program) => ts.Node;
     public importsTop?: string;
     public imports?: string;
 }

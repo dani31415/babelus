@@ -47,6 +47,12 @@ let rules = [
         importsTop:'@material-ui/core/Button'
     },
     {
+        selector:'input',
+        translate:'Input',
+        handler:handleImport,
+        importsTop:'@material-ui/core/Input'
+    },
+    {
         parentSelector:'button',
         selector:'@routerLink',
         translate:'href'
@@ -115,6 +121,36 @@ let moduleProvides = [
         provides: [ 'MatDialog', 'MatDialogRef' ]
     }
 ]
+
+function handleImport(node : ts.Node, context: pr.Context, program: pr.Program) : ts.Node {
+    if (ts.isJsxSelfClosingElement(node)) {
+        let newAttributes = [];
+        for (let attribute of node.attributes.properties) {
+            let newAttribute = attribute;
+            if (ts.isJsxAttribute(attribute) && ts.isIdentifier(attribute.name)) {
+                if (attribute.name.text=='form-control' && ts.isJsxExpression(attribute.initializer)) {
+                    let handleInputChange = context.factory.createPropertyAccessExpression(attribute.initializer.expression,'handleInputChange');
+                    let onChangeIdent = context.factory.createIdentifier('onChange');
+                    let jsxHandleInputChange = context.factory.createJsxExpression(undefined, handleInputChange);
+                    let onChange = context.factory.createJsxAttribute(onChangeIdent, jsxHandleInputChange);
+                    newAttributes.push(onChange)
+
+                    let value = context.factory.createPropertyAccessExpression(attribute.initializer.expression,'value');
+                    let valueIdent = context.factory.createIdentifier('value');
+                    let valueJsx = context.factory.createJsxExpression(undefined, value);
+                    let valueAttr = context.factory.createJsxAttribute(valueIdent, valueJsx);
+                    newAttributes.push(valueAttr)
+
+                    newAttribute = null;
+                }
+            }
+            if (newAttribute) newAttributes.push(newAttribute)
+        }
+
+        let attributesNode = context.factory.updateJsxAttributes(node.attributes, newAttributes);
+        return context.factory.updateJsxSelfClosingElement(node, node.tagName, node.typeArguments, attributesNode);
+    }
+}
 
 export class MaterialFeature implements Feature {
     constructor() {

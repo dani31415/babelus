@@ -182,3 +182,63 @@ export function relativeToCurrentFile(context: pr.Context, program: pr.Program, 
         return moduleName;
     }
 }
+
+
+/**
+ * Adds an import of the form 
+ *   import <symbol> from <module>
+ * @param context 
+ * @param program 
+ * @param importsTop 
+ */
+export function addImportTop(context:pr.Context, program:pr.Program, symbol:string, module:string) {
+    if (!module || !symbol) return;
+    let moduleName = relativeToCurrentFile(context, program, module);
+    let importTop : [file:string,symbol:string] = [moduleName,symbol];
+    let found = false;
+    // Add only once
+    for (let it of context.sourceFile.importsTop) {
+        if (importTop[0] == it[0] && importTop[1]==it[1]) {
+            found = true;
+        }
+    }
+    if (!found) {
+        context.sourceFile.importsTop.push(importTop);
+    }
+}
+
+/**
+ * Adds an import of the form 
+ *   import {symbol} from <module>
+ * @param context 
+ * @param program 
+ * @param importsTop 
+ */
+export function addImports(context:pr.Context, program:pr.Program, symbol:string, module:string) {
+
+    if (!module || !symbol) return;
+    // Maybe add new imports
+    let moduleName = relativeToCurrentFile(context, program, module);
+    context.sourceFile.imports.add( moduleName, symbol );
+}
+
+/**
+ * Create expression
+ *   symbol1.symbol2.symbol3...
+ * @param context 
+ * @param symbols 
+ */
+export function createPropertyAccessor(context:pr.Context, symbols:string[]) {
+    if (symbols.length==0) return context.factory.createToken(ts.SyntaxKind.NullKeyword);
+    let result : ts.Expression;
+    for (let symbol of symbols) {
+        if (symbol=='this' && result==null) {
+            result = context.factory.createThis();
+        } else {
+            let ident = context.factory.createIdentifier(symbol);
+            if (result==null) result = ident;
+            else result = context.factory.createPropertyAccessExpression(result, ident);
+        }
+    }
+    return result;
+}

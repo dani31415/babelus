@@ -4,8 +4,17 @@ export class AbstractControl {
     public touched:boolean;
     public invalid:boolean;
     public errors:any;
+    public handleInputChange;
+    public constructor() {
+        this.handleInputChange = this._handleInputChange.bind(this);
+    }
     public setValue(value:any) {
 
+    }
+    private _handleInputChange(event) {
+        const target = event.target;
+        const value = target.type === 'checkbox' ? target.checked : target.value;
+        this.value = value;
     }
 }
 

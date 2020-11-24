@@ -81,45 +81,46 @@ export class TagsFeature implements Feature {
     }
 
     declarations(node : ts.Node, context: pr.Context, program: pr.Program) : ts.Node {
-        // Rename tags of elements
-        if (ts.isJsxAttribute(node)) {
-            let foundRule : pr.TagRule;
-            foundRule = findRuleMatch(context, program, node);
-            if (foundRule)  {
-                if (foundRule.translate==null) return null; // remove attribute
-                let newName = context.factory.createIdentifier(foundRule.translate);
-                return context.factory.updateJsxAttribute(node, newName, node.initializer);
+        let foundRule : pr.TagRule;
+        foundRule = findRuleMatch(context, program, node);
+        if (foundRule)  {
+            // Maybe add new imports
+            helper.addImportTop(context, program, foundRule.translate, foundRule.importsTop);
+            helper.addImports(context, program, foundRule.translate, foundRule.imports);
+
+            let result = null;
+            // Rename/remove attribute names
+            if (ts.isJsxAttribute(node)) {
+                if (foundRule.translate==null) {
+                    // remove attribute
+                } else {
+                    let newName = context.factory.createIdentifier(foundRule.translate);
+                    result = context.factory.updateJsxAttribute(node, newName, node.initializer);
+                }
             }
-        }
-        if (ts.isJsxElement(node)) {
-            let foundRule : pr.TagRule;
-            foundRule = findRuleMatch(context, program, node);
-            if (foundRule) {
+
+            // Rename tags of self closing elements
+            if (ts.isJsxSelfClosingElement(node) && foundRule.translate) {
+                // Build updated jsxElement
                 let newTagName = context.factory.createIdentifier(foundRule.translate);
-                if (foundRule.importsTop) {
-                    // Maybe add new imports
-                    let moduleName = helper.relativeToCurrentFile(context, program, foundRule.importsTop);
-                    let importTop : [file:string,symbol:string] = [moduleName,foundRule.translate];
-                    let found = false;
-                    for (let it of context.sourceFile.importsTop) {
-                        if (importTop[0] == it[0] && importTop[1]==it[1]) {
-                            found = true;
-                        }
-                    }
-                    if (!found) {
-                        context.sourceFile.importsTop.push(importTop);
-                    }
-                }
-                if (foundRule.imports) {
-                    // Maybe add new imports
-                    let moduleName = helper.relativeToCurrentFile(context, program, foundRule.imports);
-                    context.sourceFile.imports.add( moduleName, foundRule.translate );
-                }
+                result = context.factory.updateJsxSelfClosingElement(node, newTagName, node.typeArguments, node.attributes);
+            }
+
+            // Rename tags of elements
+            if (ts.isJsxElement(node) && foundRule.translate) {
+                // Build updated jsxElement
+                let newTagName = context.factory.createIdentifier(foundRule.translate);
                 let openingElement = node.openingElement;
                 let newOpeningElement = context.factory.updateJsxOpeningElement(openingElement,newTagName,undefined,openingElement.attributes);
                 let newCloseningElement = context.factory.updateJsxClosingElement(node.closingElement, newTagName);
-                return context.factory.updateJsxElement(node, newOpeningElement, node.children, newCloseningElement);
+                result = context.factory.updateJsxElement(node, newOpeningElement, node.children, newCloseningElement);
             }
+
+            if (foundRule.handler) {
+                result = foundRule.handler(result, context, program);
+            }
+
+            return result;
         }
         // Identifier rename
         if (ts.isIdentifier(node)) {
@@ -132,3 +133,5 @@ export class TagsFeature implements Feature {
         return node;
     }
 }
+
+
