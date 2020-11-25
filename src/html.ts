@@ -216,6 +216,45 @@ export class Html {
             return factory.createJsxAttribute(ident, jsxExpr);
         }
 
+        let visitBoundEvent = function(attribute : r3_ast.BoundEvent) : ts.JsxAttribute {
+            let visited;
+            // TODO add $event argument
+            // Mark symbols as need bind
+
+            // Optimization: _=>f() --> f
+            if (attribute.handler instanceof expr.ASTWithSource) {
+                if (attribute.handler.ast instanceof expr.MethodCall) {
+                    if (attribute.handler.ast.args.length==0) {
+                        visited = visitPropertyRead(null,attribute.handler.ast.name);
+                    }
+                }
+            }
+            if (!visited) {
+                visited = attribute.handler.visit(astVisitor);
+                visited = factory.createArrowFunction(undefined,undefined,[],undefined,undefined,visited);
+            }
+            let jsxExpr = factory.createJsxExpression(undefined, visited);
+            let name = attribute.name;
+            if (name.startsWith('ng')) name = 'on' + name.substring(2);
+            let ident = factory.createIdentifier(name);
+            return factory.createJsxAttribute(ident, jsxExpr);
+        }
+
+        function visitPropertyRead(receiver: expr.AST, name:string): ts.Expression { 
+            let parent : ts.Expression;
+            if (!receiver || receiver instanceof expr.ImplicitReceiver) {
+                parent = factory.createThis();
+                if (scopedVars.includes(name)) {
+                    return factory.createIdentifier(name);
+                }
+            } else {
+                parent = receiver.visit(astVisitor);
+            }
+
+            let outPropAccess = factory.createPropertyAccessExpression(parent, name);
+            return outPropAccess;
+        }
+
         let astVisitor =  {
             visitUnary: (ast: expr.Unary, context: any): ts.Expression => { 
                 return null; 
@@ -274,24 +313,17 @@ export class Html {
                     return factory.createStringLiteral(""+ast.value);
                 }
             },
-            visitMethodCall: (ast: expr.MethodCall, context: any): ts.Expression => { return null; },
+            visitMethodCall: (ast: expr.MethodCall, context: any): ts.Expression => { 
+                let name = visitPropertyRead(ast.receiver, ast.name);
+                let args : expr.AST[] = ast.args;
+                let exprArgs : ts.Expression[] = args.map( x=>x.visit(astVisitor) );
+                return factory.createCallExpression(name, undefined, exprArgs);
+            },
             visitPipe: (ast: expr.BindingPipe, context: any): ts.Expression => { return null; },
             visitPrefixNot: (ast: expr.PrefixNot, context: any): ts.Expression => { return null; },
             visitNonNullAssert: (ast: expr.NonNullAssert, context: any): ts.Expression => { return null; },
             visitPropertyRead: (ast: expr.PropertyRead, context: any): ts.Expression => { 
-                let receiver = ast.receiver;
-                let parent : ts.Expression;
-                if (receiver instanceof expr.ImplicitReceiver) {
-                    parent = factory.createThis();
-                    if (scopedVars.includes(ast.name)) {
-                        return factory.createIdentifier(ast.name);
-                    }
-                } else {
-                    parent = receiver.visit(astVisitor);
-                }
-
-                let outPropAccess = factory.createPropertyAccessExpression(parent, ast.name);
-                return outPropAccess;
+                return visitPropertyRead(ast.receiver, ast.name);
             },
             visitPropertyWrite: (ast: expr.PropertyWrite, context: any): ts.Expression => { return null; },
             visitQuote: (ast: expr.Quote, context: any): ts.Expression => { return null; },
@@ -310,11 +342,12 @@ export class Html {
             visitElement: (element: r3_ast.Element) : ts.JsxChild[] => {
                 let visitedChildren : ts.JsxChild[][]  = r3_ast.visitAll(visitor, element.children);
                 let visitedInputs : ts.JsxAttribute[]  = element.inputs.map( visitBoundAttribute );
+                let visitedOutputs : ts.JsxAttribute[]  = element.outputs.map ( visitBoundEvent );
                 let content = element.sourceSpan.start.file.content;
                 // Interlace with blanks
                 let newChildren : ts.JsxChild[];
                 if (!element.endSourceSpan) { // <br>, <input>, <img>
-                    let outElement = this.createOCElement(factory,element.name,element.attributes,visitedInputs);
+                    let outElement = this.createOCElement(factory,element.name,element.attributes,visitedInputs.concat(visitedOutputs));
                     return [
                         ...this.createText(factory, this.beginBlanks(element.startSourceSpan)),
                         outElement,
@@ -332,7 +365,7 @@ export class Html {
                 newChildren = newChildren.concat( [ ...this.createText(factory, content.substring(start,element.endSourceSpan.start.offset)) ] );
                 newChildren = newChildren.concat( [ ...this.createText(factory, this.beginBlanks(element.endSourceSpan)) ] );
 
-                let outElement = this.createElement(factory,element.name,element.attributes,visitedInputs,newChildren);
+                let outElement = this.createElement(factory,element.name,element.attributes,visitedInputs.concat(visitedOutputs),newChildren);
 
                 return [
                     ...this.createText(factory, this.beginBlanks(element.startSourceSpan)),
@@ -391,7 +424,7 @@ export class Html {
                             }
                             // list.map ( variables => {} )
                         } else {
-                            //throw "Do not know what to do!";
+                            console.log("Do not know what to do with:", attr.name);
                         }
                     } else {
                         console.log("Incorrect attribute type for " + attr.name);
@@ -429,18 +462,16 @@ export class Html {
             },
             visitIcu: function(icu: r3_ast.Icu): ts.JsxChild[] { return null; }
         }
+
         let resultss : ts.JsxChild[][];
         resultss = r3_ast.visitAll(visitor,nodes);
+
         let results : ts.JsxChild[];
         results = this.flat( resultss );
+
         let result : ts.JsxElement;
-        if (results.length==1) {
-            let result0 = results[0];
-            if (ts.isJsxElement(result0)) {
-                result = result0;
-            } else {
-                result = this.createElement(factory, 'React.Fragment', [], [], [ result0 ]);
-            }
+        if (results.length==1 && ts.isJsxElement(results[0])) {
+            result = results[0];
         } else {
             result = this.createElement(factory, 'React.Fragment', [], [], results);
         }
