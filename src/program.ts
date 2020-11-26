@@ -15,7 +15,7 @@ export class TagRule {
 export class ModuleReplace {
     public pattern: string;
     public name: string;
-    public file: string;
+    public file?: string;
     public symbolRename: [from:string, to:string][];
 }
 
