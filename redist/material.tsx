@@ -17,8 +17,15 @@ export class MatDialog {
 
 export class MatDialogRef<T, R = any> {
     componentInstance: T;
+    constructor() {
+        this.afterClosed = this.afterClosed.bind(this);
+        this.close = this.close.bind(this);
+    }
     afterClosed() : Observable<R | undefined> {
         return null;
+    }
+    close(b:boolean) {
+
     }
 }
 

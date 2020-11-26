@@ -38,7 +38,7 @@ export function RouterOutlet(props:RouterOutletProps) {
 export class Router {
     readonly events: Observable<ActivationEnd> = new Observable();
     public navigateByUrl(url:string) {
-
+        window.location.href = url;
     }
 }
 

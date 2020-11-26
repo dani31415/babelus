@@ -5,6 +5,21 @@ import { Feature } from "./feature";
 import * as helper from "../helper";
 import { MapArray } from '../lib/maparray';
 
+let rules = [
+    {
+        selector:'@click',
+        translate:'onClick'
+    },
+    {
+        selector:'@keydown',
+        translate:'onKeyDown'
+    },
+    {
+        selector:'@input',
+        translate:'onInput'
+    }
+];
+
 function matchSelector(selector:string, node:ts.Node) {
     let elem : ts.JsxSelfClosingElement | ts.JsxOpeningElement
     if (ts.isJsxSelfClosingElement(node)) {
@@ -56,6 +71,10 @@ export class TagsFeature implements Feature {
     constructor() {
     }
     analysis(node : ts.Node, context: pr.Context, program: pr.Program) : ts.Node {
+        // A way to initialize
+        if (ts.isSourceFile(node)) {
+            program.tagRules = program.tagRules.concat(rules);
+        }
         // Replace Module
         if (ts.isImportDeclaration(node)) {
             if (ts.isStringLiteral(node.moduleSpecifier)) {

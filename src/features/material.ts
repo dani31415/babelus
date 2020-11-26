@@ -44,6 +44,7 @@ let rules = [
     {
         selector:'button',
         translate:'Button',
+        handler:handleButton,
         importsTop:'@material-ui/core/Button'
     },
     {
@@ -85,6 +86,10 @@ let rules = [
     {
         selector:'@cdkDropList',
         translate:'cdk-drop-list'
+    },
+    {
+        selector:'@cdkDropListDropped',
+        translate:'cdk-drop-list-dropped'
     },
     {
         selector:'@cdkDrag',
@@ -149,6 +154,29 @@ function handleImport(node : ts.Node, context: pr.Context, program: pr.Program) 
 
         let attributesNode = context.factory.updateJsxAttributes(node.attributes, newAttributes);
         return context.factory.updateJsxSelfClosingElement(node, node.tagName, node.typeArguments, attributesNode);
+    }
+}
+
+function handleButton(node : ts.Node, context: pr.Context, program: pr.Program) : ts.Node {
+    if (ts.isJsxElement(node)) {
+        let attributes = node.openingElement.attributes;
+        for (let attribute of attributes.properties) {
+            if (ts.isJsxAttribute(attribute) && ts.isIdentifier(attribute.name)) {
+                if (attribute.name.text=='click') {
+                    return; // handles its own click
+                }
+            }
+        }
+        // Add type='submit'
+        let value = context.factory.createStringLiteral('submit');
+        let valueIdent = context.factory.createIdentifier('type');
+        let valueAttr = context.factory.createJsxAttribute(valueIdent, value);
+        let newAttributes = [valueAttr,...attributes.properties];
+
+        let attributesNode = context.factory.updateJsxAttributes(attributes, newAttributes);
+        let openingElement = context.factory.updateJsxOpeningElement(node.openingElement, 
+            node.openingElement.tagName, node.openingElement.typeArguments, attributesNode);
+        return context.factory.createJsxElement(openingElement, node.children, node.closingElement);
     }
 }
 

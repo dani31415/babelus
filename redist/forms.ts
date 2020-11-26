@@ -33,6 +33,7 @@ export class FormGroup {
         [key: string]: AbstractControl;
     }) {
         this.controls = controls;
+        this.invalid = false; // valid
     }
     public controls: any;
     public invalid: boolean;
