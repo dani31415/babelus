@@ -9,7 +9,7 @@ export class AbstractControl {
         this.handleInputChange = this._handleInputChange.bind(this);
     }
     public setValue(value:any) {
-
+        this.value = value;
     }
     private _handleInputChange(event) {
         const target = event.target;
@@ -39,7 +39,7 @@ export class FormGroup {
     public invalid: boolean;
 
     public get(key:string) : AbstractControl {
-        return null;
+        return this.controls[key];
     }
 }
 
