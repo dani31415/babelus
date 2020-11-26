@@ -33,6 +33,10 @@ function flat<T>(M:T[][]) : T[] {
     return r;
 }
 
+export class HtmlContext {
+    boundVariables:string[] = [];
+}
+
 export class Html {
     public process(fileName : string) : hp.ParseTreeResult {
         this.process2(fileName);
@@ -204,10 +208,11 @@ export class Html {
         return [ factory.createJsxText(text) ];
     }
 
-    public translateTemplate(factory : ts.NodeFactory, fileName : string) : ts.Expression {
+    public translateTemplate(factory : ts.NodeFactory, fileName : string, htmlContext:HtmlContext) : ts.Expression {
         let nodes : r3_ast.Node[];
         nodes = this.angularParseTemplate(fileName);
-        let scopedVars = [];
+        let scopedVars = ['$event'];
+        let collectBounds = false;
 
         let visitBoundAttribute = function(attribute : r3_ast.BoundAttribute) : ts.JsxAttribute {
             let expr = attribute.value.visit(astVisitor);
@@ -218,21 +223,23 @@ export class Html {
 
         let visitBoundEvent = function(attribute : r3_ast.BoundEvent) : ts.JsxAttribute {
             let visited;
-            // TODO add $event argument
-            // Mark symbols as need bind
-
+            // Optimization was disabled becaused symbol needed to be bound
             // Optimization: _=>f() --> f
-            if (attribute.handler instanceof expr.ASTWithSource) {
+            /*if (attribute.handler instanceof expr.ASTWithSource) {
                 if (attribute.handler.ast instanceof expr.MethodCall) {
                     if (attribute.handler.ast.args.length==0) {
+                        collectBounds = true;
                         visited = visitPropertyRead(null,attribute.handler.ast.name);
+                        collectBounds = false;
                     }
                 }
-            }
+            }*/
             if (!visited) {
                 visited = attribute.handler.visit(astVisitor);
-                visited = factory.createArrowFunction(undefined,undefined,[],undefined,undefined,visited);
+                let param = factory.createParameterDeclaration(undefined,undefined,undefined,'$event',undefined,undefined,undefined);
+                visited = factory.createArrowFunction(undefined,undefined,[param],undefined,undefined,visited);
             }
+
             let jsxExpr = factory.createJsxExpression(undefined, visited);
             let name = attribute.name;
             if (name.startsWith('ng')) name = 'on' + name.substring(2);
@@ -249,6 +256,12 @@ export class Html {
                 }
             } else {
                 parent = receiver.visit(astVisitor);
+            }
+
+            if (collectBounds) {
+                if (!htmlContext.boundVariables.includes(name)) {
+                    htmlContext.boundVariables.push(name);
+                }
             }
 
             let outPropAccess = factory.createPropertyAccessExpression(parent, name);

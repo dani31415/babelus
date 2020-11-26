@@ -4,6 +4,24 @@ import { Feature } from './feature';
 import * as pr from '../program';
 import * as helper from "../helper";
 
+function normalizeTokenName(name : string) {
+    let res = '';
+    let capitalizeNext = true;
+    for (let i=0;i<name.length;i++) {
+        let c = name.charAt(i);
+        if (c=='_') capitalizeNext = true;
+        else {
+            if (capitalizeNext) {
+                res += c.toUpperCase();
+                capitalizeNext = false;
+            } else {
+                res += c.toLowerCase();
+            }
+        }
+    }
+    return res;
+}
+
 function descapitalizeName( name : string ) {
     if (name.length==0) return name;
     return name.charAt(0).toLowerCase() + name.slice(1);
@@ -38,16 +56,38 @@ export class DependencyInjectionFeature implements Feature {
             if (context.currentClass.isComponent || context.currentClass.isInjectable) {
                 // Get list of injected variables and types from constructor
                 for (let parameter of node.parameters) {
-                    if (ts.isIdentifier(parameter.name) && 
-                    ts.isTypeReferenceNode(parameter.type) &&
-                    ts.isIdentifier( parameter.type.typeName ) ) {
-                        let className = helper.getText( parameter.type.typeName );
-                        program.requireClasses.push( className );
-                        let varName = helper.getText( parameter.name );
-                        context.currentClass.injectedFields.push ( { 
-                            name: varName,
-                            className: className
-                        });
+                    if (ts.isIdentifier(parameter.name)) {
+                        // Parameters with @Inject :
+                        //   @Inject(MAT_DIALOG_DATA) public data
+                        if (parameter.decorators) {
+                            for (let decorator of parameter.decorators) {
+                                if (ts.isCallExpression(decorator.expression)) {
+                                    if (ts.isIdentifier(decorator.expression.expression)) {
+                                        if (decorator.expression.expression.text=='Inject') {
+                                            if (decorator.expression.arguments.length == 1) {
+                                                let symbol = decorator.expression.arguments[0];
+                                                if (ts.isIdentifier(symbol)) {
+                                                    context.currentClass.injectedFields.push ( { 
+                                                        name: parameter.name.text,
+                                                        className: normalizeTokenName(symbol.text)
+                                                    });                        
+                                                }
+                                            }
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                        if (ts.isTypeReferenceNode(parameter.type) &&
+                        ts.isIdentifier( parameter.type.typeName ) ) {
+                            let className = helper.getText( parameter.type.typeName );
+                            program.requireClasses.push( className );
+                            let varName = helper.getText( parameter.name );
+                            context.currentClass.injectedFields.push ( { 
+                                name: varName,
+                                className: className
+                            });
+                        }
                     }
                 }
                 let block;

@@ -123,6 +123,7 @@ export class ClassDeclaration {
     isComponent: boolean;
     isInjectable: boolean;
     isNgModule: boolean;
+    boundMethods: string[] = [];
     // Injectable
     createSingleton?: boolean;
     // Component data

@@ -1,7 +1,7 @@
 import * as ts from 'typescript';
 import path from 'path';
 
-import { Html } from '../html';
+import { Html, HtmlContext } from '../html';
 import * as pr from '../program';
 import { Feature } from "./feature";
 import * as helper from "../helper";
@@ -44,6 +44,19 @@ function render(factory : ts.NodeFactory, expr : ts.Expression) : ts.ClassElemen
     let parameters : ts.ParameterDeclaration[];
     parameters = [];
     return factory.createMethodDeclaration(null,null,undefined,'render',undefined,null,parameters,null,block);
+}
+
+function isMethod(variable:string, clazz: ts.ClassDeclaration) {
+    for (let member of clazz.members) {
+        if (ts.isMethodDeclaration(member)) {
+            if (ts.isIdentifier(member.name)) {
+                if (member.name.text==variable) {
+                    return true;
+                }
+            }
+        }
+    }
+    return false;
 }
 
 function findTemplate(clazz: ts.ClassDeclaration, context: pr.Context) : TemplateResult {
@@ -141,8 +154,10 @@ export class ComponentFeature implements Feature {
                 context.currentClass.templateUrl = templateResult.templateUrl;
 
                 // Add render method
+                let htmlContext = new HtmlContext();
                 let templateExpr : ts.Expression; // hp.ParseTreeResult;
-                templateExpr = this.html.translateTemplate(context.factory, templateResult.templateUrl);
+                templateExpr = this.html.translateTemplate(context.factory, templateResult.templateUrl, htmlContext);
+                context.currentClass.boundMethods = context.currentClass.boundMethods.concat(htmlContext.boundVariables);
                 let newMember = render(context.factory, templateExpr);
                 let newMembers = context.factory.createNodeArray<ts.ClassElement>([...node.members, newMember]);
 
@@ -205,6 +220,24 @@ export class ComponentFeature implements Feature {
 
         if (ts.isConstructorDeclaration(node)) {
             // Add async initialization
+            if (context.currentClass.boundMethods.length>0) {
+                let nodeClass : ts.ClassDeclaration;
+                let toBeBound = [];
+                if (ts.isClassDeclaration(node.parent)) {
+                    nodeClass = node.parent;
+                }
+                for (let variable of context.currentClass.boundMethods) {
+                    if (isMethod(variable, nodeClass)) {
+                        toBeBound.push(variable);
+                    }
+                }
+
+                if (toBeBound.length>0) {
+                    // Add bind to variables in constructor
+                    //  this.variable = this.variable.bind(this);
+                    throw "Not implemented yet!";
+                }
+            }
             if (context.currentClass.hasAsyncInit) {
                 // this.ngOnInit().then ( _ => this.setState({}));
                 let thisToken = context.factory.createToken(ts.SyntaxKind.ThisKeyword);

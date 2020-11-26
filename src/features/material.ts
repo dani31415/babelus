@@ -97,7 +97,7 @@ let rules = [
     }
 ];
 
-let ignoreModules = [ ];
+let ignoreModules = [ '@angular/material/dialog' ];
 
 let moduleReplace : pr.ModuleReplace[] = [
     {
@@ -123,7 +123,7 @@ let moduleReplace : pr.ModuleReplace[] = [
 let moduleProvides = [
     {
         module: './material',
-        provides: [ 'MatDialog', 'MatDialogRef' ]
+        provides: [ 'MatDialog', 'MatDialogRef', 'MatDialogData' ]
     }
 ]
 
@@ -162,8 +162,8 @@ function handleButton(node : ts.Node, context: pr.Context, program: pr.Program) 
         let attributes = node.openingElement.attributes;
         for (let attribute of attributes.properties) {
             if (ts.isJsxAttribute(attribute) && ts.isIdentifier(attribute.name)) {
-                if (attribute.name.text=='click') {
-                    return; // handles its own click
+                if (attribute.name.text=='onClick') {
+                    return node; // handles its own click
                 }
             }
         }

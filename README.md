@@ -34,6 +34,7 @@ npm start
 - Templates with basic HTML (attributes with interpolation)
 - Routing
 - Reactivity 😥
+  - Avoid ```this['forceUpdate']```
 - ...
 
 # Angular requirements
