@@ -24,6 +24,7 @@ let rules = [
     {
         selector:'mat-card',
         translate:'Card',
+        handler:handleCard,
         importsTop:'@material-ui/core/Card'
     },
     {
@@ -178,6 +179,34 @@ function handleButton(node : ts.Node, context: pr.Context, program: pr.Program) 
             node.openingElement.tagName, node.openingElement.typeArguments, attributesNode);
         return context.factory.createJsxElement(openingElement, node.children, node.closingElement);
     }
+}
+
+function handleCard(node : ts.Node, context: pr.Context, program: pr.Program) : ts.Node {
+    if (ts.isJsxElement(node)) {
+        let attributes = node.openingElement.attributes;
+        for (let attribute of attributes.properties) {
+            if (ts.isJsxAttribute(attribute) && ts.isIdentifier(attribute.name)) {
+                // If router-link, add CardActionArea that points to the same link
+                if (attribute.name.text=='router-link') {
+                    // 1. Remove attribute
+                    // 2. Add <CardActionArea>
+                    let cardActionArea = helper.createJsxElement(
+                        context.factory,
+                        'CardActionArea',
+                        {
+                            href:attribute.initializer
+                        },
+                        null,
+                        [...node.children]
+                    )
+                    // 3. Add imports
+                    context.sourceFile.importsTop.push(['@material-ui/core/CardActionArea','CardActionArea']);
+                    return context.factory.updateJsxElement(node, node.openingElement, [cardActionArea], node.closingElement);
+                }
+            }
+        }
+    }
+    return node;
 }
 
 export class MaterialFeature implements Feature {

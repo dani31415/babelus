@@ -242,3 +242,31 @@ export function createPropertyAccessor(context:pr.Context, symbols:string[]) {
     }
     return result;
 }
+
+
+export function createJsxElement(
+    factory: ts.NodeFactory, 
+    tagName: string, 
+    attributes1: {[key:string]:(string|ts.StringLiteral|ts.JsxExpression)}, 
+    attributes2: ts.JsxAttribute[], 
+    children: ts.JsxChild[]) : ts.JsxElement 
+{
+    let attributeNodes = Object.keys(attributes1).map ( key => {
+        let name = factory.createIdentifier(key)
+        let v = attributes1[key];
+        let value : ts.JsxExpression | ts.StringLiteral;
+        if (typeof(v)=='string') {
+            value = factory.createStringLiteral(v);
+        } else {
+            value = v;
+        }
+        return factory.createJsxAttribute(name, value);
+    });
+    attributeNodes = attributeNodes.concat ( attributes2 || []);
+    let attributesNode = factory.createJsxAttributes( attributeNodes );
+    let tag = factory.createIdentifier(tagName);
+    let openDiv = factory.createJsxOpeningElement(tag, [], attributesNode); // factory.createJsxAttributes([]));
+    let closeDiv = factory.createJsxClosingElement(tag);
+    let element = factory.createJsxElement(openDiv,children,closeDiv);
+    return element;
+}

@@ -57,7 +57,6 @@ export class CkEditorFeature implements Feature {
                 for (let attribute of node.attributes.properties) {
                     let newAttribute = attribute;
                     if (ts.isIdentifier(attribute.name)) {
-                        console.log('dins===============:', node.tagName.text, attribute.name.text);
                         if (attribute.name.text.startsWith('on')) {
                             if (ts.isJsxAttribute(attribute) && 
                             ts.isJsxExpression(attribute.initializer) &&
