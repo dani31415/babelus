@@ -246,25 +246,32 @@ export function createPropertyAccessor(context:pr.Context, symbols:string[]) {
 
 export function createJsxElement(
     factory: ts.NodeFactory, 
-    tagName: string, 
-    attributes1: {[key:string]:(string|ts.StringLiteral|ts.JsxExpression)}, 
-    attributes2: ts.JsxAttribute[], 
+    tagName: string|ts.JsxTagNameExpression, 
+    attributes1: {[key:string]:(string|ts.StringLiteral|ts.Expression)}, 
+    attributes2: ts.JsxAttributeLike[], 
     children: ts.JsxChild[]) : ts.JsxElement 
 {
-    let attributeNodes = Object.keys(attributes1).map ( key => {
+    let attributeNodes : ts.JsxAttributeLike[] = Object.keys(attributes1).map ( key => {
         let name = factory.createIdentifier(key)
         let v = attributes1[key];
         let value : ts.JsxExpression | ts.StringLiteral;
         if (typeof(v)=='string') {
             value = factory.createStringLiteral(v);
-        } else {
+        } else if (ts.isLiteralExpression(v)) {
             value = v;
+        } else {
+            value = factory.createJsxExpression(undefined, v);
         }
         return factory.createJsxAttribute(name, value);
     });
     attributeNodes = attributeNodes.concat ( attributes2 || []);
     let attributesNode = factory.createJsxAttributes( attributeNodes );
-    let tag = factory.createIdentifier(tagName);
+    let tag;
+    if (typeof(tagName)=='string') {
+        tag = factory.createIdentifier(tagName);
+    } else {
+        tag = tagName;
+    }
     let openDiv = factory.createJsxOpeningElement(tag, [], attributesNode); // factory.createJsxAttributes([]));
     let closeDiv = factory.createJsxClosingElement(tag);
     let element = factory.createJsxElement(openDiv,children,closeDiv);
@@ -309,3 +316,15 @@ export function createArrowFunction(factory: ts.NodeFactory, parameters:string[]
     }
     return factory.createArrowFunction(undefined,undefined,nodeParams,undefined,undefined,body);
 }
+
+export function createAttribute(context: pr.Context, name:string, value:ts.Expression|string) {
+    let ident = context.factory.createIdentifier(name);
+    let initializer;
+    if (typeof(value)=='string') {
+        initializer = context.factory.createStringLiteral(value);
+    } else {
+        initializer = context.factory.createJsxExpression(undefined, value);
+    }
+    return context.factory.createJsxAttribute(ident, initializer);
+}
+

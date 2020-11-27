@@ -139,16 +139,19 @@ function handleImport(node : ts.Node, context: pr.Context, program: pr.Program) 
                     let handleInputChange = context.factory.createPropertyAccessExpression(attribute.initializer.expression,'handleInputChange');
                     let call = helper.createCall(context.factory, handleInputChange, ['event','this']);
                     let arrowFunc = helper.createArrowFunction(context.factory, ['event'], call);
-                    let onChangeIdent = context.factory.createIdentifier('onChange');
-                    let jsxHandleInputChange = context.factory.createJsxExpression(undefined, arrowFunc);
-                    let onChange = context.factory.createJsxAttribute(onChangeIdent, jsxHandleInputChange);
+                    let onChange = helper.createAttribute(context, 'onChange', arrowFunc);
                     newAttributes.push(onChange)
+
+                    // onFocus={[attribute.initializer] .handleFocus}
+                    let handleFocus = context.factory.createPropertyAccessExpression(attribute.initializer.expression,'handleFocus');
+                    let callHandleFocus = helper.createCall(context.factory, handleFocus, ['event','this']);
+                    let arrowFuncHandleFocus = helper.createArrowFunction(context.factory, ['event'], callHandleFocus);
+                    let onFocus = helper.createAttribute(context, 'onFocus', arrowFuncHandleFocus);
+                    newAttributes.push(onFocus);
 
                     // value={ [attribute.initializer] .value}
                     let value = context.factory.createPropertyAccessExpression(attribute.initializer.expression,'value');
-                    let valueIdent = context.factory.createIdentifier('value');
-                    let valueJsx = context.factory.createJsxExpression(undefined, value);
-                    let valueAttr = context.factory.createJsxAttribute(valueIdent, valueJsx);
+                    let valueAttr = helper.createAttribute(context, 'value', value);
                     newAttributes.push(valueAttr)
 
                     newAttribute = null;
@@ -173,15 +176,11 @@ function handleButton(node : ts.Node, context: pr.Context, program: pr.Program) 
             }
         }
         // Add type='submit'
-        let value = context.factory.createStringLiteral('submit');
-        let valueIdent = context.factory.createIdentifier('type');
-        let valueAttr = context.factory.createJsxAttribute(valueIdent, value);
-        let newAttributes = [valueAttr,...attributes.properties];
-
-        let attributesNode = context.factory.updateJsxAttributes(attributes, newAttributes);
-        let openingElement = context.factory.updateJsxOpeningElement(node.openingElement, 
-            node.openingElement.tagName, node.openingElement.typeArguments, attributesNode);
-        return context.factory.createJsxElement(openingElement, node.children, node.closingElement);
+        return helper.createJsxElement(context.factory, 
+            node.openingElement.tagName, 
+            { type:'submit' }, 
+            [...node.openingElement.attributes.properties], 
+            [...node.children]);
     }
 }
 
@@ -197,7 +196,6 @@ function handleCard(node : ts.Node, context: pr.Context, program: pr.Program) : 
                     // <CardActionArea onClick={router.navigatorByUrl( [attribute.initializer] )}> ...
                     let func = helper.createPropertyAccessor(context, ['router','navigatorByUrl']);
                     let expr = helper.createCall(context.factory, func, [ attribute.initializer ]);
-                    let jsxExpr = context.factory.createJsxExpression(undefined, expr);
                     let cardActionArea = helper.createJsxElement(
                         context.factory,
                         'CardActionArea',
@@ -205,7 +203,7 @@ function handleCard(node : ts.Node, context: pr.Context, program: pr.Program) : 
                         {
                             //href:attribute.initializer
                             //to:attribute.initializer
-                            onClick:jsxExpr
+                            onClick:expr
                         },
                         null,
                         [...node.children]
