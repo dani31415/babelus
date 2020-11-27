@@ -138,6 +138,19 @@ function findAsyncInit(node:ts.ClassDeclaration) {
     return false;
 }
 
+function findMethodByName(node:ts.ClassDeclaration, name:string) : ts.MethodDeclaration {
+    if (!node.members) return;
+    for (let member of node.members) {
+        if (ts.isMethodDeclaration(member)) {
+            if (ts.isIdentifier(member.name)) {
+                if (member.name.text==name) return member;
+            }
+        }
+    }
+    return null;
+}
+
+
 /**
  * Translates templates to jsx (ts.JsxChild)
  * Removes @Component decorator.
@@ -153,13 +166,26 @@ export class ComponentFeature implements Feature {
                 context.currentClass.selector = templateResult.selector;
                 context.currentClass.templateUrl = templateResult.templateUrl;
 
+                let newMembers = [...node.members];
+
                 // Add render method
                 let htmlContext = new HtmlContext();
                 let templateExpr : ts.Expression; // hp.ParseTreeResult;
                 templateExpr = this.html.translateTemplate(context.factory, templateResult.templateUrl, htmlContext);
                 context.currentClass.boundMethods = context.currentClass.boundMethods.concat(htmlContext.boundVariables);
                 let newMember = render(context.factory, templateExpr);
-                let newMembers = context.factory.createNodeArray<ts.ClassElement>([...node.members, newMember]);
+                newMembers.push(newMember);
+                //let newMembers = context.factory.createNodeArray<ts.ClassElement>([...node.members, newMember]);
+
+                // ngOnChanges
+                if (findMethodByName(node,"ngOnChanges")!=null) {
+                    let func = helper.createPropertyAccessor(context,['AngularUtils','callNgOnChanges']);
+                    let statment = helper.createCall(context.factory,func,['this', 'prevProps', 'prevState']);
+                    // AngularUtils.callNgOnChanges(this,prevProps,prevState);
+                    newMembers.push(helper.newMethod(context.factory,'componentDidUpdate',['prevProps','prevState'],[statment]));
+                    context.sourceFile.imports.add( helper.relativeToCurrentFile(context, program, './angular-utils'), 'AngularUtils');
+                    program.assets.push('./angular-utils');
+                }
 
                 // Check async init
                 context.currentClass.hasAsyncInit = findAsyncInit(node);
@@ -255,6 +281,15 @@ export class ComponentFeature implements Feature {
                 let newStatements : ts.Statement[] = [...node.body.statements,updateStatement];
                 let newBody = context.factory.updateBlock(node.body,newStatements);
                 return context.factory.updateConstructorDeclaration(node,node.decorators,node.modifiers,node.parameters,newBody);
+            }
+        }
+        // Remove .emit
+        //    f.emit(x)  -->  f(x)
+        if (ts.isPropertyAccessExpression(node)) {
+            if (ts.isIdentifier(node.name)) {
+                if (node.name.text=='emit') {
+                    return node.expression;
+                }
             }
         }
         return node;

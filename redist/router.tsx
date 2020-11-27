@@ -1,6 +1,6 @@
 import { Observable } from 'rxjs';
 import React from 'react';
-import { NavLink, Route, Switch, useParams, useRouteMatch, withRouter } from 'react-router-dom';
+import { NavLink, Route, Switch, useParams, useRouteMatch, useHistory } from 'react-router-dom';
 
 export type SingleRoute =  {
     path:string,
@@ -16,6 +16,7 @@ class RouterOutletProps {
 
 function RouterTarget(props) {
     activatedRoute._currentParams = useParams();
+    router._history = useHistory();
     return React.createElement(props.component,{},[]);
 }
 
@@ -37,8 +38,14 @@ export function RouterOutlet(props:RouterOutletProps) {
 
 export class Router {
     readonly events: Observable<ActivationEnd> = new Observable();
+    public _history;
     public navigateByUrl(url:string) {
-        window.location.href = url;
+        this._history.push(url);
+    }
+    public navigatorByUrl(url:string) {
+        return ()=>{
+            this._history.push(url);
+        }
     }
 }
 

@@ -270,3 +270,42 @@ export function createJsxElement(
     let element = factory.createJsxElement(openDiv,children,closeDiv);
     return element;
 }
+
+type ExprOrStatement = ts.Expression|ts.Statement;
+
+export function newMethod(factory: ts.NodeFactory, name:string, parameters:string[], exprs:ts.Expression[]) {
+    let nodeParams = parameters.map( param =>
+        factory.createParameterDeclaration(undefined,undefined,undefined,param,undefined,undefined,undefined)
+    );
+    let statements = exprs.map( expr => factory.createExpressionStatement(expr) );
+    let body = factory.createBlock(statements, true);
+    return factory.createMethodDeclaration(undefined,undefined,undefined,name,undefined,undefined,nodeParams,undefined,body);
+}
+
+type ExprOrIdent = ts.Expression|string;
+
+function toExpression(factory: ts.NodeFactory) : (x:any) => ts.Expression {
+    return (x:ExprOrIdent) => {
+        if (typeof(x)=='string') return factory.createIdentifier(x);
+        if (ts.isJsxExpression(x)) return x.expression;
+        return x as ts.Expression;
+    }
+}
+
+export function createCall(factory: ts.NodeFactory, func:ExprOrIdent, args:ExprOrIdent[]) {
+    let nodeArgs = args.map( toExpression(factory) );
+    return factory.createCallExpression( toExpression(factory)(func), undefined, nodeArgs);
+}
+
+export function createArrowFunction(factory: ts.NodeFactory, parameters:string[], args:ts.Expression|ts.Statement[]) {
+    let nodeParams = parameters.map( param =>
+        factory.createParameterDeclaration(undefined,undefined,undefined,param,undefined,undefined,undefined)
+    );
+    let body;
+    if (Array.isArray(args)) {
+        body = factory.createBlock(args, true);
+    } else {
+        body = args;
+    }
+    return factory.createArrowFunction(undefined,undefined,nodeParams,undefined,undefined,body);
+}

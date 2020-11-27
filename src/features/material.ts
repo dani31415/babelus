@@ -135,12 +135,16 @@ function handleImport(node : ts.Node, context: pr.Context, program: pr.Program) 
             let newAttribute = attribute;
             if (ts.isJsxAttribute(attribute) && ts.isIdentifier(attribute.name)) {
                 if (attribute.name.text=='form-control' && ts.isJsxExpression(attribute.initializer)) {
+                    // onChange={event => [attribute.initializer] .handleInputChange(event,this)}
                     let handleInputChange = context.factory.createPropertyAccessExpression(attribute.initializer.expression,'handleInputChange');
+                    let call = helper.createCall(context.factory, handleInputChange, ['event','this']);
+                    let arrowFunc = helper.createArrowFunction(context.factory, ['event'], call);
                     let onChangeIdent = context.factory.createIdentifier('onChange');
-                    let jsxHandleInputChange = context.factory.createJsxExpression(undefined, handleInputChange);
+                    let jsxHandleInputChange = context.factory.createJsxExpression(undefined, arrowFunc);
                     let onChange = context.factory.createJsxAttribute(onChangeIdent, jsxHandleInputChange);
                     newAttributes.push(onChange)
 
+                    // value={ [attribute.initializer] .value}
                     let value = context.factory.createPropertyAccessExpression(attribute.initializer.expression,'value');
                     let valueIdent = context.factory.createIdentifier('value');
                     let valueJsx = context.factory.createJsxExpression(undefined, value);
@@ -190,17 +194,27 @@ function handleCard(node : ts.Node, context: pr.Context, program: pr.Program) : 
                 if (attribute.name.text=='router-link') {
                     // 1. Remove attribute
                     // 2. Add <CardActionArea>
+                    // <CardActionArea onClick={router.navigatorByUrl( [attribute.initializer] )}> ...
+                    let func = helper.createPropertyAccessor(context, ['router','navigatorByUrl']);
+                    let expr = helper.createCall(context.factory, func, [ attribute.initializer ]);
+                    let jsxExpr = context.factory.createJsxExpression(undefined, expr);
                     let cardActionArea = helper.createJsxElement(
                         context.factory,
                         'CardActionArea',
+                        //'Link',
                         {
-                            href:attribute.initializer
+                            //href:attribute.initializer
+                            //to:attribute.initializer
+                            onClick:jsxExpr
                         },
                         null,
                         [...node.children]
                     )
                     // 3. Add imports
+                    let module = helper.relativeToCurrentFile(context, program, './router');
+                    context.sourceFile.imports.add(module,'router');
                     context.sourceFile.importsTop.push(['@material-ui/core/CardActionArea','CardActionArea']);
+                    //context.sourceFile.imports.add('react-router-dom','Link');
                     return context.factory.updateJsxElement(node, node.openingElement, [cardActionArea], node.closingElement);
                 }
             }

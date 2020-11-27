@@ -11,10 +11,11 @@ export class AbstractControl {
     public setValue(value:any) {
         this.value = value;
     }
-    private _handleInputChange(event) {
+    private _handleInputChange(event, this_) {
         const target = event.target;
         const value = target.type === 'checkbox' ? target.checked : target.value;
         this.value = value;
+        this_.forceUpdate();
     }
 }
 
